@@ -1,5 +1,6 @@
 FROM dockcross/linux-@TARGET_NAME@:latest
 LABEL maintainer="Paolo Bosetti <paolo.bosetti@unitn.it>"
+USER root
 
 ENV WORKDIR /work
 ENV BUILDDIR /build
@@ -96,7 +97,7 @@ RUN cd ${BUILDDIR} && git clone --depth 1 https://github.com/liteserver/binn.git
 ENV LIBUSB_VERSION 1.0.24
 RUN cd ${BUILDDIR} && curl -L https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2 | tar xjf - && \
     cd libusb-${LIBUSB_VERSION} && \
-    ./configure CC=$CC --prefix=$CROSS_ROOT --host=$CROSS_TRIPLE --enable-udev=no &&\
+    ./configure CC=$CC --prefix=$CROSS_ROOT --host=$CROSS_TRIPLE --enable-udev=no -enable-fast-install &&\
     make && make install && \
     make clean
 
