@@ -27,7 +27,7 @@
 
 #define USB_IDVENDOR 0x04B4
 #define USB_IDPRODUCT 0x0328
-#define MTX_TIMEOUT 500
+#define MTX_TIMEOUT 2000
 #define MTX_EP_CMD 0x01
 #define MTX_EP_REPLY 0x81
 #define MTX_EP_FRAME 0x82
@@ -37,7 +37,7 @@
 #define MTX_CMD_MODE 0x30
 #define MTX_CMD_EXPTIME 0x31
 #define MTX_CMD_BUFFEREDFRAMES 0x33
-#define MTX_CMD_BUFFEREDDATA 0x34
+#define MTX_CMD_GETBUFFEREDDATA 0x34
 
 #define STRING_LENGTH 14
 typedef unsigned char BYTE;
@@ -67,8 +67,6 @@ typedef union {
 
 typedef union {
   struct __attribute__((__packed__)) frame {
-    BYTE rc;
-    BYTE len;
     uint16_t _dummy1[16];
     uint16_t light_shield[13];
     uint16_t _reserved[3];
@@ -189,8 +187,15 @@ int mightex_get_buffer_count(mightex_t *m) {
   return (int)buf[2];
 }
 
-int mightex_get_buffered_data(mightex_t *m) {
-  return 0;
+int mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
+  BYTE buf[2];
+  buf[0] = MTX_CMD_GETBUFFEREDDATA;
+  buf[1] = n;
+  return mightex_send(m, buf, 2);
+}
+
+int mightex_read_buffered_data(mightex_t *m, ccd_frames_t *frame) {
+  return libusb_bulk_transfer(m->handle, MTX_EP_FRAME, frame->buf, sizeof(frame->frame), NULL, m->timeout);
 }
 
 mightex_t *mightex_new() {
@@ -287,6 +292,8 @@ void mightex_close(mightex_t *m) {
 
 int main(void) {
   mightex_t *m = mightex_new();
+  ccd_frames_t frame;
+  int n;
 
   if (!m) {
     printf("Mightex not found!\n");
@@ -295,9 +302,26 @@ int main(void) {
   }
 
   mightex_set_mode(m, MTX_NORMAL_MODE);
-  mightex_set_exptime(m, 10);
+  mightex_set_exptime(m, 1);
   usleep(500000);
-  printf("Frame count: %d\n", mightex_get_buffer_count(m));
+  n = mightex_get_buffer_count(m);
+  printf("Frame count: %d\n", n);
+  if (n > 0) {
+    int i;
+    uint16_t avg = 0;
+    memset(&frame, 0, sizeof(frame));
+    mightex_prepare_buffered_data(m, 1);
+    mightex_read_buffered_data(m, &frame);
+
+    for (i = 0; i < 13; i++) {
+      avg += frame.frame.light_shield[i];
+    }
+    avg /= 13;
+
+    for (i = 0; i < 3648; i++) {
+      printf("%d %u\n", i, frame.frame.image_data[i] < avg ? 0 : frame.frame.image_data[i] - avg);
+    }
+  }
 
   mightex_close(m);
 
