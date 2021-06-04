@@ -12,6 +12,7 @@
 /xbuild/*
 !/xbuild/.gitkeep
 /products/*
+/products_host/*
 
 # Dynamically generated files
 /src/defines.h
