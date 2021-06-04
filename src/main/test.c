@@ -124,15 +124,14 @@ int mightex_get_version(mightex_t *m) {
   // request
   memset(dv, 0, sizeof(device_info_t));
   dv->buf[0] = MTX_CMD_FIRMWARE;
-  // di->buf[1] = 0x02;
-  rc = mightex_send(m, dv->buf, 1);
+  rc = mightex_send(m, dv->buf, 2);
   if (rc != 0x01)
     return rc;
   // reply
   memset(dv, 0, sizeof(device_info_t));
-  dv->buf[0] = 0x01;
   rc = mightex_receive(m, dv->buf, sizeof(dv->version));
-  snprintf(m->version, sizeof(m->version), "%d.%d.%d", dv->version.major, dv->version.minor, dv->version.rev);
+  snprintf(m->version, sizeof(m->version), "%d.%d.%d", dv->version.major,
+             dv->version.minor, dv->version.rev);
   return rc;
 }
 
@@ -142,12 +141,11 @@ int mightex_get_info(mightex_t *m) {
   // request
   memset(di, 0, sizeof(device_info_t));
   di->buf[0] = MTX_CMD_INFO;
-  rc = mightex_send(m, di->buf, 1);
+  rc = mightex_send(m, di->buf, 2);
   if (rc != 0x01)
     return rc;
   // reply
   memset(di, 0, sizeof(device_info_t));
-  di->buf[0] = 0x01;
   rc = mightex_receive(m, di->buf, sizeof(device_info_t));
   return rc;
 }
@@ -167,6 +165,7 @@ int mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
  char *mightex_version(mightex_t *m) {
    return m->version;
  }
+ 
 
 // t is in ms
 int mightex_set_exptime(mightex_t *m, uint16_t t) {
@@ -191,7 +190,7 @@ int mightex_get_buffer_count(mightex_t *m) {
 }
 
 int mightex_get_buffered_data(mightex_t *m) {
-  
+  return 0;
 }
 
 mightex_t *mightex_new() {
@@ -255,11 +254,11 @@ mightex_t *mightex_new() {
         printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
 
       mightex_get_version(m);
-      printf("Version: %s\n", m->version);
+      printf("Version: %s\n", mightex_version(m));
 
       mightex_get_info(m);
-      printf("SerialNo.: %s\n", mightex_serial_no(m)); 
-
+      printf("SerialNo.: %s\n", mightex_serial_no(m));
+      
       break;
     } else {
       m->dev = NULL;
