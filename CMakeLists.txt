@@ -147,6 +147,30 @@ install(TARGETS ${TARGETS_LIST}
   ARCHIVE DESTINATION lib/static
 )
 
+#   ____                 
+#  |  _ \  ___   ___ ___ 
+#  | | | |/ _ \ / __/ __|
+#  | |_| | (_) | (__\__ \
+#  |____/ \___/ \___|___/
+option(BUILD_DOC "Build documentation" OFF)         
+find_package(Doxygen)
+if (BUILD_DOC AND DOXYGEN_FOUND)
+  set(DOXYGEN_IN ${CMAKE_CURRENT_LIST_DIR}/Doxyfile.conf)
+  set(DOXYGEN_OUT ${CMAKE_CURRENT_LIST_DIR}/doc/Doxyfile)
+
+  # request to configure the file
+  configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+  message(STATUS "Doxygen documentation can be build with `make doc`")
+  add_custom_target(doc
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating API documentation with Doxygen"
+    VERBATIM
+  )
+elseif (BUILD_DOC AND NOT DOXYGEN_FOUND)
+  message(ERROR "Doxygen need to be installed to generate the doxygen documentation")
+endif (BUILD_DOC AND DOXYGEN_FOUND)
+
 #   _____           _               _             
 #  |  __ \         | |             (_)            
 #  | |__) |_ _  ___| | ____ _  __ _ _ _ __   __ _ 

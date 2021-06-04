@@ -98,7 +98,7 @@ static mtx_result_t mightex_receive(mightex_t *m, BYTE *buf, int len) {
   return (mtx_result_t)buf[0];
 }
 
-mtx_result_t mightex_get_version(mightex_t *m) {
+static mtx_result_t mightex_get_version(mightex_t *m) {
   int rc;
   device_version_t *dv = &m->device_version;
   // request
@@ -117,7 +117,7 @@ mtx_result_t mightex_get_version(mightex_t *m) {
   return rc;
 }
 
-mtx_result_t mightex_get_info(mightex_t *m) {
+static mtx_result_t mightex_get_info(mightex_t *m) {
   int rc;
   device_info_t *di = &m->device_info;
   // request
@@ -186,7 +186,7 @@ int mightex_get_buffer_count(mightex_t *m) {
   return (int)buf[2];
 }
 
-mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
+static mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
   BYTE buf[3];
   buf[0] = MTX_CMD_GETBUFFEREDDATA;
   buf[1] = 0x01;
