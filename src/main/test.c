@@ -39,10 +39,14 @@
 #define MTX_CMD_BUFFEREDFRAMES 0x33
 #define MTX_CMD_GETBUFFEREDDATA 0x34
 
+#define MTX_PIXELS 3648
+#define MTX_BLACK_PIXELS 13
+
 #define STRING_LENGTH 14
 typedef unsigned char BYTE;
 
 typedef enum { MTX_NORMAL_MODE = 0, MTX_TRIGGER_MODE = 1 } mtx_mode_t;
+typedef enum { MTX_FAIL = 0, MTX_OK = 1} mtx_result_t;
 
 typedef union {
   struct __attribute__((__packed__)) di {
@@ -92,39 +96,41 @@ typedef struct {
   unsigned int timeout;
   device_info_t device_info;
   device_version_t device_version;
+  ccd_frames_t frames[4];
+  uint16_t dark_mean;
   char version[12];
 } mightex_t;
 
-static int mightex_send(mightex_t *m, BYTE *buf, int len) {
+static mtx_result_t mightex_send(mightex_t *m, BYTE *buf, int len) {
   int rc;
   rc = libusb_bulk_transfer(m->handle, MTX_EP_CMD, buf, len, NULL, m->timeout);
   if (rc != LIBUSB_SUCCESS) {
     printf("Error on send: %s\n", libusb_error_name(rc));
-    return rc;
+    return MTX_FAIL;
   }
-  return 0x01;
+  return MTX_OK;
 }
 
-static int mightex_receive(mightex_t *m, BYTE *buf, int len) {
+static mtx_result_t mightex_receive(mightex_t *m, BYTE *buf, int len) {
   int rc;
   rc =
       libusb_bulk_transfer(m->handle, MTX_EP_REPLY, buf, len, NULL, m->timeout);
   if (rc != LIBUSB_SUCCESS) {
     printf("Error on receive: %s\n", libusb_error_name(rc));
-    return rc;
+    return MTX_FAIL;
   }
-  return (int)buf[0];
+  return (mtx_result_t)buf[0];
 }
 
-int mightex_get_version(mightex_t *m) {
+mtx_result_t mightex_get_version(mightex_t *m) {
   int rc;
   device_version_t *dv = &m->device_version;
   // request
   memset(dv, 0, sizeof(device_info_t));
   dv->buf[0] = MTX_CMD_FIRMWARE;
   rc = mightex_send(m, dv->buf, 2);
-  if (rc != 0x01)
-    return rc;
+  if (rc != MTX_OK)
+    return MTX_FAIL;
   // reply
   memset(dv, 0, sizeof(device_info_t));
   rc = mightex_receive(m, dv->buf, sizeof(dv->version));
@@ -133,22 +139,22 @@ int mightex_get_version(mightex_t *m) {
   return rc;
 }
 
-int mightex_get_info(mightex_t *m) {
+mtx_result_t mightex_get_info(mightex_t *m) {
   int rc;
   device_info_t *di = &m->device_info;
   // request
   memset(di, 0, sizeof(device_info_t));
   di->buf[0] = MTX_CMD_INFO;
   rc = mightex_send(m, di->buf, 2);
-  if (rc != 0x01)
-    return rc;
+  if (rc != MTX_OK)
+    return MTX_FAIL;
   // reply
   memset(di, 0, sizeof(device_info_t));
   rc = mightex_receive(m, di->buf, sizeof(device_info_t));
   return rc;
 }
 
-int mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
+mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
   BYTE mode_b = (BYTE)mode;
   BYTE buf[2];
   buf[0] = MTX_CMD_MODE;
@@ -163,10 +169,21 @@ int mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
  char *mightex_version(mightex_t *m) {
    return m->version;
  }
+
+ uint16_t *mightex_frame_p(mightex_t *m) {
+   return m->frames[0].frame.image_data;
+ }
  
+ uint16_t mightex_frame_timestamp(mightex_t *m) {
+   return m->frames[0].frame.time_stamp;
+ }
+
+ uint16_t mightex_dark_mean(mightex_t *m) {
+   return m->dark_mean;
+ }
 
 // t is in ms
-int mightex_set_exptime(mightex_t *m, uint16_t t) {
+mtx_result_t mightex_set_exptime(mightex_t *m, uint16_t t) {
   BYTE buf[3];
   uint16_t val = htons(t * 10);
   buf[0] = MTX_CMD_EXPTIME;
@@ -187,15 +204,26 @@ int mightex_get_buffer_count(mightex_t *m) {
   return (int)buf[2];
 }
 
-int mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
+mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
   BYTE buf[2];
   buf[0] = MTX_CMD_GETBUFFEREDDATA;
   buf[1] = n;
   return mightex_send(m, buf, 2);
 }
 
-int mightex_read_buffered_data(mightex_t *m, ccd_frames_t *frame) {
-  return libusb_bulk_transfer(m->handle, MTX_EP_FRAME, frame->buf, sizeof(frame->frame), NULL, m->timeout);
+mtx_result_t mightex_read_frame(mightex_t *m) {
+  int i, rc;
+  mightex_prepare_buffered_data(m, 1);
+  rc = libusb_bulk_transfer(m->handle, MTX_EP_FRAME, m->frames[0].buf, sizeof(m->frames[0].frame), NULL, m->timeout);
+  if (rc != LIBUSB_SUCCESS) {
+    return MTX_FAIL;
+  }
+  m->dark_mean = 0;
+  for (i = 0; i < MTX_BLACK_PIXELS; i++) {
+    m->dark_mean += m->frames[0].frame.light_shield[i];
+  }
+  m->dark_mean /= MTX_BLACK_PIXELS;
+  return MTX_OK;
 }
 
 mightex_t *mightex_new() {
@@ -205,6 +233,7 @@ mightex_t *mightex_new() {
   libusb_device **devs;
 
   m->timeout = MTX_TIMEOUT;
+  m->dark_mean = 0;
   m->desc = malloc(sizeof(m->desc));
 
   rc = libusb_init(&m->ctx);
@@ -292,7 +321,6 @@ void mightex_close(mightex_t *m) {
 
 int main(void) {
   mightex_t *m = mightex_new();
-  ccd_frames_t frame;
   int n;
 
   if (!m) {
@@ -301,25 +329,22 @@ int main(void) {
     exit(EXIT_FAILURE);
   }
 
-  mightex_set_mode(m, MTX_NORMAL_MODE);
-  mightex_set_exptime(m, 1);
-  usleep(500000);
+  if (mightex_set_mode(m, MTX_NORMAL_MODE) != MTX_OK) {
+    printf("Failed setting mode\n");
+  }
+  if (mightex_set_exptime(m, 1) != MTX_OK) {
+    printf("Failed setting esposure time\n");
+  }
+  usleep(1000000);
   n = mightex_get_buffer_count(m);
   printf("Frame count: %d\n", n);
   if (n > 0) {
     int i;
-    uint16_t avg = 0;
-    memset(&frame, 0, sizeof(frame));
-    mightex_prepare_buffered_data(m, 1);
-    mightex_read_buffered_data(m, &frame);
+    uint16_t *data = mightex_frame_p(m);
 
-    for (i = 0; i < 13; i++) {
-      avg += frame.frame.light_shield[i];
-    }
-    avg /= 13;
-
-    for (i = 0; i < 3648; i++) {
-      printf("%d %u\n", i, frame.frame.image_data[i] < avg ? 0 : frame.frame.image_data[i] - avg);
+    mightex_read_frame(m);
+    for (i = 0; i < MTX_PIXELS; i++) {
+      printf("%d %u %u\n", i, data[i], data[i] < m->dark_mean ? 0 : data[i] - m->dark_mean);
     }
   }
 
