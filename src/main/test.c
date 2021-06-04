@@ -17,11 +17,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <libusb-1.0/libusb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define USB_IDVENDOR 0x04B4
 #define USB_IDPRODUCT 0x0328
@@ -30,42 +32,57 @@
 #define MTX_EP_REPLY 0x81
 #define MTX_EP_FRAME 0x82
 
+#define MTX_CMD_FIRMWARE 0x01
+#define MTX_CMD_INFO 0x21
+#define MTX_CMD_MODE 0x30
+#define MTX_CMD_EXPTIME 0x31
+#define MTX_CMD_BUFFEREDFRAMES 0x33
+#define MTX_CMD_BUFFEREDDATA 0x34
+
 #define STRING_LENGTH 14
 typedef unsigned char BYTE;
+
+typedef enum { MTX_NORMAL_MODE = 0, MTX_TRIGGER_MODE = 1 } mtx_mode_t;
 
 typedef union {
   struct __attribute__((__packed__)) di {
     BYTE rc;
     BYTE len;
-    BYTE ConfigRevision;
-    BYTE ModuleNo[STRING_LENGTH];
-    BYTE SerialNo[STRING_LENGTH];
-    BYTE ManuafactureDate[STRING_LENGTH];
+    BYTE config_revision;
+    BYTE module_no[STRING_LENGTH];
+    BYTE serial_no[STRING_LENGTH];
+    BYTE manuafacture_date[STRING_LENGTH];
   } di;
+  BYTE buf[sizeof(struct di)];
+} device_info_t;
+
+typedef union {
   struct __attribute__((__packed__)) ver {
     BYTE rc;
     BYTE len;
     BYTE major, minor, rev;
   } version;
   BYTE buf[sizeof(struct di)];
-} device_info_t;
+} device_version_t;
 
 typedef union {
   struct __attribute__((__packed__)) frame {
-    uint16_t Dummy1[16];
-    uint16_t LightShield[13];
-    uint16_t Reserved[3];
-    uint16_t ImageData[3648];
-    uint16_t Dummy2[14];
-    uint16_t Padding[138];
-    uint16_t TimeStamp;
-    uint16_t ExposureTime;
-    uint16_t TriggerOccurred;
-    uint16_t TriggerEventCount;
-    uint16_t Padding2[4];
+    BYTE rc;
+    BYTE len;
+    uint16_t _dummy1[16];
+    uint16_t light_shield[13];
+    uint16_t _reserved[3];
+    uint16_t image_data[3648];
+    uint16_t _dummy2[14];
+    uint16_t _padding[138];
+    uint16_t time_stamp;
+    uint16_t exposure_time;
+    uint16_t trigger_occurred;
+    uint16_t trigger_event_count;
+    uint16_t _padding2[4];
   } frame;
   BYTE buf[sizeof(struct frame)];
-} tCCDFrames;
+} ccd_frames_t;
 
 typedef struct {
   libusb_device *dev;
@@ -75,28 +92,111 @@ typedef struct {
   unsigned char manufacturer[256];
   unsigned char product[256];
   unsigned int timeout;
+  device_info_t device_info;
+  device_version_t device_version;
+  char version[12];
 } mightex_t;
 
 static int mightex_send(mightex_t *m, BYTE *buf, int len) {
   int rc;
   rc = libusb_bulk_transfer(m->handle, MTX_EP_CMD, buf, len, NULL, m->timeout);
-  if (rc != LIBUSB_SUCCESS)
+  if (rc != LIBUSB_SUCCESS) {
     printf("Error on send: %s\n", libusb_error_name(rc));
-  return (int)buf[0];
+    return rc;
+  }
+  return 0x01;
 }
 
 static int mightex_receive(mightex_t *m, BYTE *buf, int len) {
   int rc;
   rc =
       libusb_bulk_transfer(m->handle, MTX_EP_REPLY, buf, len, NULL, m->timeout);
-  if (rc != LIBUSB_SUCCESS)
+  if (rc != LIBUSB_SUCCESS) {
     printf("Error on receive: %s\n", libusb_error_name(rc));
+    return rc;
+  }
   return (int)buf[0];
+}
+
+int mightex_get_version(mightex_t *m) {
+  int rc;
+  device_version_t *dv = &m->device_version;
+  // request
+  memset(dv, 0, sizeof(device_info_t));
+  dv->buf[0] = MTX_CMD_FIRMWARE;
+  // di->buf[1] = 0x02;
+  rc = mightex_send(m, dv->buf, 1);
+  if (rc != 0x01)
+    return rc;
+  // reply
+  memset(dv, 0, sizeof(device_info_t));
+  dv->buf[0] = 0x01;
+  rc = mightex_receive(m, dv->buf, sizeof(dv->version));
+  snprintf(m->version, sizeof(m->version), "%d.%d.%d", dv->version.major, dv->version.minor, dv->version.rev);
+  return rc;
+}
+
+int mightex_get_info(mightex_t *m) {
+  int rc;
+  device_info_t *di = &m->device_info;
+  // request
+  memset(di, 0, sizeof(device_info_t));
+  di->buf[0] = MTX_CMD_INFO;
+  rc = mightex_send(m, di->buf, 1);
+  if (rc != 0x01)
+    return rc;
+  // reply
+  memset(di, 0, sizeof(device_info_t));
+  di->buf[0] = 0x01;
+  rc = mightex_receive(m, di->buf, sizeof(device_info_t));
+  return rc;
+}
+
+int mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
+  BYTE mode_b = (BYTE)mode;
+  BYTE buf[2];
+  buf[0] = MTX_CMD_MODE;
+  buf[1] = mode_b;
+  return mightex_send(m, buf, 2);
+}
+
+ char *mightex_serial_no(mightex_t *m) {
+   return (char *)m->device_info.di.serial_no;
+ }
+
+ char *mightex_version(mightex_t *m) {
+   return m->version;
+ }
+
+// t is in ms
+int mightex_set_exptime(mightex_t *m, uint16_t t) {
+  BYTE buf[3];
+  uint16_t val = htons(t * 10);
+  buf[0] = MTX_CMD_EXPTIME;
+  memcpy(buf + 1, &val, sizeof(val));
+  return mightex_send(m, buf, 3);
+}
+
+int mightex_get_buffer_count(mightex_t *m) {
+  BYTE buf[3];
+  int rc;
+  buf[0] = MTX_CMD_BUFFEREDFRAMES;
+  buf[1] = 0x00;
+  buf[2] = 0x00;
+  mightex_send(m, buf, 2);
+  rc = mightex_receive(m, buf, 3);
+  if (rc <= 0)
+    return rc;
+  return (int)buf[2];
+}
+
+int mightex_get_buffered_data(mightex_t *m) {
+  
 }
 
 mightex_t *mightex_new() {
   mightex_t *m = malloc(sizeof(mightex_t));
-  int rc, len;
+  int rc;
   ssize_t cnt, i = 0;
   libusb_device **devs;
 
@@ -154,62 +254,11 @@ mightex_t *mightex_new() {
       if (rc != LIBUSB_SUCCESS)
         printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
 
-      // Firmware version
-      memset(&b, 0, sizeof(b));
-      b.buf[0] = 0x01;
-      b.buf[1] = 0x02;
-      mightex_send(m, b.buf, 2);
-      // rc = libusb_bulk_transfer(m->handle, 0x01, buf, 2, &len, 500);
-      // if (rc != LIBUSB_SUCCESS)
-      //   printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
-      // printf("Buffer[%03d]: ", len);
-      // for (i = 0; i < len; i++) {
-      //   printf("%02x", buf[i]);
-      // }
-      // printf("\n");
+      mightex_get_version(m);
+      printf("Version: %s\n", m->version);
 
-      memset(&b, 0, sizeof(b));
-      b.buf[0] = 0x01;
-      b.buf[1] = 0x00;
-      mightex_receive(m, b.buf, 5);
-      // rc = libusb_bulk_transfer(m->handle, 0x81, buf, 5, &len, 500);
-      // if (rc != LIBUSB_SUCCESS)
-      //   printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
-      // printf("Buffer[%03d]: ", len);
-      // for (i = 0; i < len; i++) {
-      //   printf("%02x", buf[i]);
-      // }
-      // printf("\n");
-      printf("Version: %02d.%02d.%02d\n", b.version.major, b.version.minor,
-             b.version.rev);
-
-      // Device info
-      memset(&b, 0, sizeof(b));
-      b.buf[0] = 0x21;
-      b.buf[1] = 0x00;
-      mightex_send(m, b.buf, 2);
-      // rc = libusb_bulk_transfer(m->handle, 0x01, buf, 2, &len, 500);
-      // if (rc != LIBUSB_SUCCESS)
-      //   printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
-      // printf("Buffer[%03d]: ", len);
-      // for (i = 0; i < len; i++) {
-      //   printf("%02x", buf[i]);
-      // }
-      printf("\n");
-
-      memset(&b, 0, sizeof(b));
-      b.buf[0] = 0x01;
-      mightex_receive(m, b.buf, sizeof(b.di));
-      // rc = libusb_bulk_transfer(m->handle, 0x81, b.buf, sizeof(b.buf), &len,
-      //                           500);
-      // if (rc != LIBUSB_SUCCESS)
-      //   printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
-      printf("Buffer[%03zu]: ", sizeof(b.di));
-      for (i = 0; i < sizeof(b.di); i++) {
-        printf("%02x", b.buf[i]);
-      }
-      printf("\n");
-      printf("SerialNo.: %s\n", b.di.SerialNo);
+      mightex_get_info(m);
+      printf("SerialNo.: %s\n", mightex_serial_no(m)); 
 
       break;
     } else {
@@ -245,6 +294,11 @@ int main(void) {
     mightex_close(m);
     exit(EXIT_FAILURE);
   }
+
+  mightex_set_mode(m, MTX_NORMAL_MODE);
+  mightex_set_exptime(m, 10);
+  usleep(500000);
+  printf("Frame count: %d\n", mightex_get_buffer_count(m));
 
   mightex_close(m);
 
