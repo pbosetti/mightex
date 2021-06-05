@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18)
 
 #   _____          _ _           _                        
 #  |  __ \        | (_)         (_)                       
@@ -28,6 +28,21 @@ project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
 # set(CMAKE_BUILD_TYPE Debug)
 # set(CMAKE_BUILD_TYPE Release)
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+
+# Libusb
+set(LIBUSB_VERSION 1.0.24)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(LIBUSB_NO_DEBUG --disable-log)
+endif()
+include(ExternalProject)
+ExternalProject_Add(libusb
+  URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
+  PREFIX ${CMAKE_SOURCE_DIR}/vendor
+  BUILD_IN_SOURCE TRUE
+  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=yes --enable-shared=no ${LIBUSB_NO_DEBUG}
+  BUILD_COMMAND make
+  INSTALL_COMMAND make install 
+)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -68,14 +83,14 @@ elseif(UNIX AND NOT APPLE)
   set(LINUX TRUE)
   set(NATIVE TRUE)
   set(LUA_LIB lua5.3)
-  include_directories(/usr/include/${LUA_LIB} /usr/local/include)
-  link_directories(/usr/lib/x86_64-linux-gnu)
+  include_directories(/usr/include/${LUA_LIB} /usr/local/include ${CMAKE_SOURCE_DIR}/vendor/include)
+  link_directories(/usr/lib/x86_64-linux-gnu ${CMAKE_SOURCE_DIR}/vendor/lib)
 elseif(APPLE)
   message(STATUS "Building on Apple OS X")
   set(LUA_LIB lua)
   set(NATIVE TRUE)
-  include_directories(/usr/local/include /usr/local/include/lua /usr/local/opt/libusb/include/libusb-1.0)
-  link_directories(/usr/local/lib /usr/local/opt/libusb/lib)
+  include_directories(/usr/local/include /usr/local/include/lua ${CMAKE_SOURCE_DIR}/vendor/include)
+  link_directories(/usr/local/lib ${CMAKE_SOURCE_DIR}/vendor/lib)
 endif()
 
 # COMPILE OPTIONS
@@ -106,6 +121,7 @@ configure_file(
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
 target_link_libraries(mightex_static libusb-1.0.a)
+add_dependencies(mightex_static libusb)
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
 target_link_libraries(mightex_shared libusb-1.0.a)

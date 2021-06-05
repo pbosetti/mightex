@@ -15,6 +15,7 @@
 /products/*
 /products_host/*
 /doc
+/vendor/*
 
 # Dynamically generated files
 /src/defines.h
