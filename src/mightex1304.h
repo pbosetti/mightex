@@ -25,7 +25,7 @@
  * 
  * @see mightex_dark_mean and mightex_read_frame
  */
-#define MTX_BLACK_PIXELS 13
+#define MTX_DARK_PIXELS 13
 
 typedef unsigned char BYTE;
 
@@ -153,7 +153,7 @@ uint16_t mightex_frame_timestamp(mightex_t *m);
 /**
  * @brief The mean of the shielded pixels
  * 
- * This returns the averaged value of the @ref MTX_BLACK_PIXELS. This value
+ * This returns the averaged value of the @ref MTX_DARK_PIXELS. This value
  * gives an estimate of the sensor dark current.
  * 
  * @param m 
@@ -161,5 +161,20 @@ uint16_t mightex_frame_timestamp(mightex_t *m);
  */
 uint16_t mightex_dark_mean(mightex_t *m);
 
+/**
+ * @brief Return the number of pixels (@ref MTX_PIXELS)
+ * 
+ * @param m 
+ * @return uint16_t 
+ */
+uint16_t mightex_pixel_count(mightex_t *m);
+
+/**
+ * @brief Return the number of shielded pixels (@ref MTX_DARK_PIXELS)
+ * 
+ * @param m 
+ * @return uint16_t 
+ */
+uint16_t mightex_dark_pixel_count(mightex_t *m);
 /**@}*/
 #endif

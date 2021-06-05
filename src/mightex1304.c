@@ -202,10 +202,10 @@ mtx_result_t mightex_read_frame(mightex_t *m) {
     return MTX_FAIL;
   }
   m->dark_mean = 0;
-  for (i = 0; i < MTX_BLACK_PIXELS; i++) {
+  for (i = 0; i < MTX_DARK_PIXELS; i++) {
     m->dark_mean += m->frames[0].frame.light_shield[i];
   }
-  m->dark_mean /= MTX_BLACK_PIXELS;
+  m->dark_mean /= MTX_DARK_PIXELS;
   return MTX_OK;
 }
 
@@ -300,4 +300,12 @@ void mightex_close(mightex_t *m) {
   }
   libusb_exit(m->ctx);
   free(m);
+}
+
+uint16_t mightex_pixel_count(mightex_t *m) {
+  return MTX_PIXELS;
+}
+
+uint16_t mightex_dark_pixel_count(mightex_t *m) {
+  return MTX_DARK_PIXELS;
 }

@@ -22,7 +22,7 @@ execute_process(
   OUTPUT_VARIABLE GIT_VERSION_TAG
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-project(X-Template VERSION ${GIT_VERSION_TAG} LANGUAGES C)
+project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
     
 # Override build type (Debug or Release)
 # set(CMAKE_BUILD_TYPE Debug)
@@ -105,30 +105,24 @@ configure_file(
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-add_library(mightex_shared SHARED ${LIB_SOURCES})
-add_executable(test ${SOURCE_DIR}/main/test.c)
+target_link_libraries(mightex_static libusb-1.0.a)
 
+add_library(mightex_shared SHARED ${LIB_SOURCES})
+target_link_libraries(mightex_shared libusb-1.0.a)
+set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
+
+add_executable(test ${SOURCE_DIR}/main/test.c)
+target_link_options(test BEFORE PUBLIC -pthread)
+target_link_libraries(test mightex_static)
+
+add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
+target_link_options(test BEFORE PUBLIC -pthread)
+target_link_libraries(listusb libusb-1.0.a)
 
 list(APPEND TARGETS_LIST
-  test
+  test listusb
+  mightex_static mightex_shared
 )
-if(IS_ARM)
-  list(APPEND TARGETS_LIST mightex_shared)
-  target_link_options(test BEFORE PUBLIC -pthread)
-  target_link_libraries(mightex_shared libusb-1.0.a)
-  target_link_libraries(test mightex_shared)
-elseif(IS_OPENWRT)
-  list(APPEND TARGETS_LIST mightex_shared)
-  target_link_options(test BEFORE PUBLIC -pthread)
-  target_link_libraries(mightex_shared libusb-1.0.a)
-  target_link_libraries(test mightex_shared)
-else()
-  list(APPEND TARGETS_LIST mightex_static)
-  target_link_options(test BEFORE PUBLIC -pthread)
-  target_link_libraries(mightex_static libusb-1.0.a)
-  target_link_libraries(mightex_shared libusb-1.0.a)
-  target_link_libraries(test mightex_static)
-endif()
 
 #   _____           _        _ _ 
 #  |_   _|         | |      | | |
@@ -181,7 +175,7 @@ endif (BUILD_DOC AND DOXYGEN_FOUND)
 #                             |___/         |___/ 
 set(CPACK_GENERATOR "STGZ")
 set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
-set(CPACK_PACKAGE_NAME xtemplate-${CMAKE_BUILD_TYPE})
+set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
 include(CPack)
 
 #   _____             _              __ _ _      
