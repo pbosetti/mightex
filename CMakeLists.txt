@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 
 #   _____          _ _           _                        
 #  |  __ \        | (_)         (_)                       
@@ -39,7 +39,7 @@ ExternalProject_Add(libusb_prj
   URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
   PREFIX ${CMAKE_SOURCE_DIR}/vendor
   BUILD_IN_SOURCE TRUE
-  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-shared=no ${LIBUSB_NO_DEBUG}
+  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
   BUILD_COMMAND make
   INSTALL_COMMAND make install 
 )
