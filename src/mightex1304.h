@@ -136,7 +136,7 @@ mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode);
  * @param ud optional user data (can be NULL)
  * @return typedef 
  */
-typedef void mightex_filter_t(mightex_t *m, uint16_t *raw_data, uint16_t len, void *ud);
+typedef void mightex_filter_t(mightex_t *m, uint16_t * const raw_data, uint16_t len, void *ud);
 
 /**
  * @brief Estimator prototype
@@ -147,7 +147,7 @@ typedef void mightex_filter_t(mightex_t *m, uint16_t *raw_data, uint16_t len, vo
  * @param ud optional user data (can be NULL)
  * @return typedef 
  */
-typedef double mightex_estimator_t(mightex_t *m, uint16_t *data, uint16_t len, void *ud);
+typedef double mightex_estimator_t(mightex_t *m, uint16_t * const data, uint16_t len, void *ud);
 
 /**
  * @brief Set the filter function
