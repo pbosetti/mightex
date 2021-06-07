@@ -35,14 +35,18 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
   set(LIBUSB_NO_DEBUG --disable-log)
 endif()
 include(ExternalProject)
-ExternalProject_Add(libusb
+ExternalProject_Add(libusb_prj
   URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
   PREFIX ${CMAKE_SOURCE_DIR}/vendor
   BUILD_IN_SOURCE TRUE
-  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=yes --enable-shared=no ${LIBUSB_NO_DEBUG}
+  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-shared=no ${LIBUSB_NO_DEBUG}
   BUILD_COMMAND make
   INSTALL_COMMAND make install 
 )
+ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
+message(STATUS "Installing libusb in ${INSTALL_DIR}")
+add_library(libusb STATIC IMPORTED)
+set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -90,7 +94,8 @@ elseif(APPLE)
   set(LUA_LIB lua)
   set(NATIVE TRUE)
   include_directories(/usr/local/include /usr/local/include/lua ${CMAKE_SOURCE_DIR}/vendor/include)
-  link_directories(/usr/local/lib ${CMAKE_SOURCE_DIR}/vendor/lib)
+  link_directories(${CMAKE_CURRENT_LIST_DIR}/vendor/lib)
+  set(FRAMEWORKS "-framework CoreFoundation -framework IOKit")
 endif()
 
 # COMPILE OPTIONS
@@ -111,6 +116,7 @@ endif()
 # FILES
 # expect all sources in /src, except mains
 set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
+set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
 file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
 # generate defines.h, which also contains version numbers matching git tags
 configure_file(
@@ -120,20 +126,21 @@ configure_file(
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-target_link_libraries(mightex_static libusb-1.0.a)
-add_dependencies(mightex_static libusb)
+# target_link_libraries(mightex_static libusb-1.0.a "-framework CoreFoundation -framework IOKit")
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
-target_link_libraries(mightex_shared libusb-1.0.a)
+target_link_libraries(mightex_shared libusb ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
 
 add_executable(test ${SOURCE_DIR}/main/test.c)
 target_link_options(test BEFORE PUBLIC -pthread)
-target_link_libraries(test mightex_static)
+target_link_libraries(test mightex_static libusb ${FRAMEWORKS})
 
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
-target_link_options(test BEFORE PUBLIC -pthread)
-target_link_libraries(listusb libusb-1.0.a)
+target_link_options(listusb BEFORE PUBLIC -pthread)
+target_link_libraries(listusb libusb ${FRAMEWORKS})
+
+add_dependencies(test libusb)
 
 list(APPEND TARGETS_LIST
   test listusb
