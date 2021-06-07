@@ -25,6 +25,9 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 #include <sys/param.h>
+#ifdef __linux
+#include <inttypes.h>
+#endif
 
 // Cmake-generated values:
 #define GIT_VERSION_TAG "@GIT_VERSION_TAG@"
