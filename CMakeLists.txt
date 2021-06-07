@@ -126,7 +126,7 @@ configure_file(
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-# target_link_libraries(mightex_static libusb-1.0.a "-framework CoreFoundation -framework IOKit")
+target_link_libraries(mightex_static libusb ${FRAMEWORKS})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
 target_link_libraries(mightex_shared libusb ${FRAMEWORKS})
@@ -134,7 +134,7 @@ set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME
 
 add_executable(test ${SOURCE_DIR}/main/test.c)
 target_link_options(test BEFORE PUBLIC -pthread)
-target_link_libraries(test mightex_static libusb ${FRAMEWORKS})
+target_link_libraries(test mightex_static)
 
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
 target_link_options(listusb BEFORE PUBLIC -pthread)

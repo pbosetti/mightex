@@ -107,7 +107,113 @@ void mightex_close(mightex_t *m);
  */
 mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode);
 
+/** @name Filters and Estimators
+ * 
+ * These functions allow to automatically apply filters and estimators on a
+ * frame.
+ * 
+ * A *filter* is a function that operates in place on all the individual pixel
+ * values. Useful for scaling, dark value removal, thresholding, etc.
+ * 
+ * An *estimator* is a function that operates on all pixel values and returns
+ * a single estimate (a mean value, peak, etc.). 
+ */
+ /**@{*/ 
+
+/**
+ * @brief Filter prototype
+ * 
+ * This is a filter function that operates on all elements in @ref 
+ * mightex_frame_p in place. Ideally, @ref mightex_raw_frame_p shall remain 
+ * unchanged and always hold original raw data, while @ref mightex_frame_p is
+ * initially (i.e. just after calling @ref mightex_read_frame) a copy of raw 
+ * data, then this function is applied by calling @ref mightex_apply_filter.
+ * 
+ * @param m 
+ * @param raw_data an array of data (the raw values from @ref 
+ * mightex_raw_frame_p)
+ * @param len the array length
+ * @param ud optional user data (can be NULL)
+ * @return typedef 
+ */
+typedef void mightex_filter_t(mightex_t *m, uint16_t *raw_data, uint16_t len, void *ud);
+
+/**
+ * @brief Estimator prototype
+ * 
+ * @param m 
+ * @param data an array of data (the raw values from @ref mightex_raw_frame_p)
+ * @param len the aray length
+ * @param ud optional user data (can be NULL)
+ * @return typedef 
+ */
+typedef double mightex_estimator_t(mightex_t *m, uint16_t *data, uint16_t len, void *ud);
+
+/**
+ * @brief Set the filter function
+ * 
+ * By default, the filter function subtracts the dark pixels average. Set it
+ * to NULL if you want to disable this behavior.
+ * 
+ * @param m 
+ * @param filter the function to be used when calling @ref mightex_apply_filter
+ */
+void mightex_set_filter(mightex_t *m, mightex_filter_t *filter);
+
+/**
+ * @brief Reset the filter to the default one
+ * 
+ * By default, the filter function subtracts the dark pixels average. Useful
+ * when you changed it with @ref mightex_set_filter and later on you want to
+ * reset it to the default behavior.
+ * 
+ * @param m 
+ */
+void mightex_reset_filter(mightex_t *m);
+
+/**
+ * @brief Apply the filter function set with @ref mightex_set_filter
+ * 
+ * By default, the filter function subtracts the dark pixels average.
+ * 
+ * @param m 
+ * @param userdata a user provided data (typically a struct pointer)
+ */
+void mightex_apply_filter(mightex_t *m, void *userdata);
+
+/**
+ * @brief Set the estimator function
+ * 
+ * @param m 
+ * @param estimator 
+ * @note the estimator function works on the **filtered** frame data
+ */
+void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator);
+
+/**
+ * @brief Reset the estimator to the default one
+ * 
+ * By default, the estimators caculates the weighted average of the filtered
+ * image data, thresholding the data to a level equal to three times the dark 
+ * level.
+ * 
+ * @param m 
+ */
+void mightex_reset_estimator(mightex_t *m);
+
+/**
+ * @brief Apply the estimator function
+ * 
+ * @param m 
+ * @param userdata 
+ * @return double 
+ */
+double mightex_apply_estimator(mightex_t *m, void *userdata);
+
+/**@}*/
+
 /** @name Accessors
+ * 
  * Accessors to Mightex object parameters
  */
 /**@{*/
@@ -132,7 +238,7 @@ char *mightex_serial_no(mightex_t *m);
 char *mightex_version(mightex_t *m);
 
 /**
- * @brief Return the pointer to the image storage area
+ * @brief Return the pointer to the raw image storage area
  * 
  * The last frame, as collected with @ref mightex_read_frame, is stored as an
  * array of `uint16_t` in the location pointed by the returned pointer.
@@ -141,6 +247,19 @@ char *mightex_version(mightex_t *m);
  * @return uint16_t* An array of @ref MTX_PIXELS elements
  */
 uint16_t *mightex_frame_p(mightex_t *m);
+
+/**
+ * @brief Return the pointer to the filtered image storage area
+ * 
+ * The last frame, as collected with @ref mightex_read_frame, is copied as an
+ * array of `uint16_t` in the location pointed by the returned pointer. This
+ * array of data is filtered upon calling @ref mightex_apply_filter.
+ * 
+ * @param m 
+ * @return uint16_t* An array of @ref MTX_PIXELS elements
+ */
+uint16_t *mightex_raw_frame_p(mightex_t *m);
+
 
 /**
  * @brief The timestamp of the last grabbed frame

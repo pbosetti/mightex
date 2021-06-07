@@ -73,15 +73,37 @@ typedef struct mightex {
   device_info_t device_info;
   device_version_t device_version;
   ccd_frames_t frames[4];
+  uint16_t data[MTX_PIXELS];
   uint16_t dark_mean;
   char version[12];
+  mightex_filter_t *filter;
+  mightex_estimator_t *estimator;
 } mightex_t;
+
+static void filter_dark(mightex_t *m, uint16_t *data, uint16_t len, void *ud) {
+  register uint16_t i = 0;
+  for (i = 0; i < MTX_PIXELS; i++) {
+    data[i] = data[i] < m->dark_mean ? 0 : data[i] - m->dark_mean; 
+  }
+}
+
+static double estimator_center(mightex_t *m, uint16_t *data, uint16_t len, void *ud) {
+  register uint16_t i = 0, n = 0;
+  double value = 0;
+  uint16_t thr = m->dark_mean * 3;
+  for (i = 0; i < MTX_PIXELS; i++) {
+    if (data[i] < thr) continue;
+    value += (i * data[i]);
+    n++;
+  }
+  return value / n;
+}
 
 static mtx_result_t mightex_send(mightex_t *m, BYTE *buf, int len) {
   int rc;
   rc = libusb_bulk_transfer(m->handle, MTX_EP_CMD, buf, len, NULL, m->timeout);
   if (rc != LIBUSB_SUCCESS) {
-    printf("Error on send: %s\n", libusb_error_name(rc));
+    fprintf(stderr, "Error on send: %s\n", libusb_error_name(rc));
     return MTX_FAIL;
   }
   return MTX_OK;
@@ -92,7 +114,7 @@ static mtx_result_t mightex_receive(mightex_t *m, BYTE *buf, int len) {
   rc =
       libusb_bulk_transfer(m->handle, MTX_EP_REPLY, buf, len, NULL, m->timeout);
   if (rc != LIBUSB_SUCCESS) {
-    printf("Error on receive: %s\n", libusb_error_name(rc));
+    fprintf(stderr, "Error on receive: %s\n", libusb_error_name(rc));
     return MTX_FAIL;
   }
   return (mtx_result_t)buf[0];
@@ -152,9 +174,13 @@ mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
  }
 
  uint16_t *mightex_frame_p(mightex_t *m) {
-   return m->frames[0].frame.image_data;
+   return m->data;
  }
  
+ uint16_t *mightex_raw_frame_p(mightex_t *m) {
+   return m->frames[0].frame.image_data;
+ }
+
  uint16_t mightex_frame_timestamp(mightex_t *m) {
    return m->frames[0].frame.time_stamp;
  }
@@ -206,6 +232,7 @@ mtx_result_t mightex_read_frame(mightex_t *m) {
     m->dark_mean += m->frames[0].frame.light_shield[i];
   }
   m->dark_mean /= MTX_DARK_PIXELS;
+  memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS);
   return MTX_OK;
 }
 
@@ -218,6 +245,8 @@ mightex_t *mightex_new() {
   m->timeout = MTX_TIMEOUT;
   m->dark_mean = 0;
   m->desc = malloc(sizeof(m->desc));
+  m->filter = filter_dark;
+  m->estimator = estimator_center;
 
   rc = libusb_init(&m->ctx);
   if (rc < 0)
@@ -249,32 +278,32 @@ mightex_t *mightex_new() {
       memset(&b, 0, sizeof(b));
       rc = libusb_open(m->dev, &m->handle);
       if (rc != LIBUSB_SUCCESS)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
       rc = libusb_reset_device(m->handle);
       if (rc != LIBUSB_SUCCESS)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
       rc = libusb_set_auto_detach_kernel_driver(m->handle, 1);
       if (rc != LIBUSB_ERROR_NOT_SUPPORTED)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
       rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iManufacturer,
                                               m->manufacturer,
                                               sizeof(m->manufacturer));
       if (rc <= 0)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
       rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iProduct,
                                               m->product, sizeof(m->product));
       if (rc <= 0)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
-      printf("Found device: %s - %s\n", m->manufacturer, m->product);
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
+      fprintf(stderr, "Found device: %s - %s\n", m->manufacturer, m->product);
       rc = libusb_claim_interface(m->handle, 0);
       if (rc != LIBUSB_SUCCESS)
-        printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
 
       mightex_get_version(m);
-      printf("Version: %s\n", mightex_version(m));
+      fprintf(stderr, "Version: %s\n", mightex_version(m));
 
       mightex_get_info(m);
-      printf("SerialNo.: %s\n", mightex_serial_no(m));
+      fprintf(stderr, "SerialNo.: %s\n", mightex_serial_no(m));
       
       break;
     } else {
@@ -295,7 +324,7 @@ void mightex_close(mightex_t *m) {
   if (m->handle) {
     rc = libusb_release_interface(m->handle, 0);
     if (rc != LIBUSB_SUCCESS)
-      printf("%d rc: %s\n", __LINE__, libusb_error_name(rc));
+      fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__, libusb_error_name(rc));
     libusb_close(m->handle);
   }
   libusb_exit(m->ctx);
@@ -308,4 +337,33 @@ uint16_t mightex_pixel_count(mightex_t *m) {
 
 uint16_t mightex_dark_pixel_count(mightex_t *m) {
   return MTX_DARK_PIXELS;
+}
+
+
+void mightex_set_filter(mightex_t *m, mightex_filter_t *filter) {
+  m->filter = filter;
+}
+
+void mightex_reset_filter(mightex_t *m) {
+  m->filter = filter_dark;
+}
+
+void mightex_apply_filter(mightex_t *m, void *ud) {
+  if (m->filter)
+    m->filter(m, m->data, MTX_PIXELS, ud);
+}
+
+void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator) {
+  m->estimator = estimator;
+}
+
+void mightex_reset_estimator(mightex_t *m) {
+  m->estimator = estimator_center;
+}
+
+double mightex_apply_estimator(mightex_t *m, void *ud) {
+  if (m->estimator)
+    return m->estimator(m, m->data, MTX_PIXELS, ud);
+  else 
+    return 0.0;
 }
