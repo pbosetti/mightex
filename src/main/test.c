@@ -31,9 +31,10 @@ int main(void) {
   uint16_t *data = mightex_frame_p(m);
 
   mightex_read_frame(m);
+  fprintf(stderr, "Dark current level: %d\n", mightex_dark_mean(m));
   mightex_apply_filter(m, NULL);
 
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < mightex_pixel_count(m); i++) {
     printf("%d %u %u\n", i, raw_data[i], data[i]);
   }
 

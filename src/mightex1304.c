@@ -80,10 +80,15 @@ typedef struct mightex {
   mightex_estimator_t *estimator;
 } mightex_t;
 
+void stop() {
+  printf("stop");
+}
+
 static void filter_dark(mightex_t *m, uint16_t *data, uint16_t len, void *ud) {
   register uint16_t i = 0;
   for (i = 0; i < MTX_PIXELS; i++) {
     data[i] = data[i] < m->dark_mean ? 0 : data[i] - m->dark_mean; 
+    if (i > 1822) stop();
   }
 }
 
@@ -232,7 +237,7 @@ mtx_result_t mightex_read_frame(mightex_t *m) {
     m->dark_mean += m->frames[0].frame.light_shield[i];
   }
   m->dark_mean /= MTX_DARK_PIXELS;
-  memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS);
+  memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS * sizeof(uint16_t));
   return MTX_OK;
 }
 
