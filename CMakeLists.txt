@@ -118,6 +118,7 @@ endif()
 set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
 file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
+file(GLOB HEADERS "${SOURCE_DIR}/*.h")
 # generate defines.h, which also contains version numbers matching git tags
 configure_file(
   ${SOURCE_DIR}/defines.h.in
@@ -131,6 +132,7 @@ target_link_libraries(mightex_static libusb ${FRAMEWORKS})
 add_library(mightex_shared SHARED ${LIB_SOURCES})
 target_link_libraries(mightex_shared libusb ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
+set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(test ${SOURCE_DIR}/main/test.c)
 target_link_options(test BEFORE PUBLIC -pthread)
@@ -162,6 +164,7 @@ install(TARGETS ${TARGETS_LIST}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib/static
+  PUBLIC_HEADER DESTINATION include
 )
 
 #   ____                 
@@ -196,7 +199,7 @@ endif (BUILD_DOC AND DOXYGEN_FOUND)
 #  |_|   \__,_|\___|_|\_\__,_|\__, |_|_| |_|\__, |
 #                              __/ |         __/ |
 #                             |___/         |___/ 
-set(CPACK_GENERATOR "STGZ")
+set(CPACK_GENERATOR "STGZ;TGZ")
 set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
 set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
 include(CPack)
