@@ -10,7 +10,6 @@ cmake_minimum_required(VERSION 3.16)
 #                                                   |___/ 
 # GIT versioning - It requires at leas one git tag e.g. 0.0.1
 # create it with: git tag -am " " 0.0.1
-if (NOT WIN32)
 execute_process(
   COMMAND git describe --long --dirty=§
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -23,7 +22,6 @@ execute_process(
   OUTPUT_VARIABLE GIT_VERSION_TAG
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-endif()
 project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
     
 # Override build type (Debug or Release)
@@ -31,24 +29,26 @@ project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
 # set(CMAKE_BUILD_TYPE Release)
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
-# Libusb
-set(LIBUSB_VERSION 1.0.24)
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(LIBUSB_NO_DEBUG --disable-log)
+if(NOT WIN32)
+  # Libusb
+  set(LIBUSB_VERSION 1.0.24)
+  if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(LIBUSB_NO_DEBUG --disable-log)
+  endif()
+  include(ExternalProject)
+  ExternalProject_Add(libusb_prj
+    URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
+    PREFIX ${CMAKE_SOURCE_DIR}/vendor
+    BUILD_IN_SOURCE TRUE
+    CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install 
+  )
+  ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
+  message(STATUS "Installing libusb in ${INSTALL_DIR}")
+  add_library(libusb STATIC IMPORTED)
+  set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
 endif()
-include(ExternalProject)
-ExternalProject_Add(libusb_prj
-  URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
-  PREFIX ${CMAKE_SOURCE_DIR}/vendor
-  BUILD_IN_SOURCE TRUE
-  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install 
-)
-ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
-message(STATUS "Installing libusb in ${INSTALL_DIR}")
-add_library(libusb STATIC IMPORTED)
-set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -107,14 +107,12 @@ if (NOT WIN32)
     message(STATUS "Debug mode, enabling all warnings")
     add_compile_options(-Wall -Wno-comment)
   endif()
-endif()
-
-if (WIN32)
+  set(LIBUSB_NAME libusb)
+else() #WIN32
   include_directories(${CMAKE_SOURCE_DIR}/win/include)
   link_directories(${CMAKE_SOURCE_DIR}/win/lib)
   set(LIBUSB_NAME libusb-1.0.lib)
-else()
-  set(LIBUSB_NAME libusb)
+  set(CMAKE_PLATFORM "Windows")
 endif()
 #   _____           _           _     _____       _        _ _     
 #  |  __ \         (_)         | |   |  __ \     | |      (_) |    

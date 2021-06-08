@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <stdint.h>
+#include <Windows.h>
 #else
 #include <unistd.h>
 #endif // _WIN32

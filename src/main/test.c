@@ -28,7 +28,9 @@ int main(void) {
   }
 
   while ((n = mightex_get_buffer_count(m)) <= 0) {
-    #ifndef _WIN32
+    #ifdef _WIN32
+    Sleep(10);
+    #else
     usleep(10000);
     #endif
   }
