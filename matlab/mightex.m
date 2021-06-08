@@ -83,6 +83,41 @@ classdef mightex < handle
       frame = obj.Frame.value;
       rawFrame = obj.RawFrame.value;
     end
+    
+    function plotFrame(m, thr)
+      frame = m.Frame.value;
+      frameThr = mightex.threshold(frame, thr);
+      center = mightex.center(frameThr);
+      plot(frame)
+      hold on
+      plot(frameThr)
+      xlabel("Pixel #")
+      ylabel("Intensity")
+      ylim([0 70000])
+      yline(65535, "red")
+      xl = xline(center, "green", "Center: " + center);
+      xl.Color = "black";
+      xl.FontSize = 12;
+      hold off
+    end
+  end
+  
+  methods (Static)
+    function thrFrame = threshold(frame, level)
+      thrFrame = frame;
+      thrFrame(frame < level) = 0;
+    end
+    
+    function center = center(frame)
+      num = 0.0;
+      den = 0.0;
+      frame = double(frame);
+      for i = 1:length(frame)
+        num = num + i * frame(i);
+        den = den + frame(i);
+      end
+      center = num / den;
+    end
   end
 end
 

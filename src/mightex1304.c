@@ -98,16 +98,16 @@ static void filter_dark(mightex_t *m, uint16_t *const data, uint16_t len,
 
 static double estimator_center(mightex_t *m, uint16_t *const data, uint16_t len,
                                void *ud) {
-  register uint16_t i = 0, n = 0;
-  double value = 0;
+  register uint16_t i = 0;
+  double num = 0, den = 0;
   uint16_t thr = m->dark_mean * 3;
   for (i = 0; i < MTX_PIXELS; i++) {
     if (data[i] < thr)
       continue;
-    value += (i * data[i]);
-    n++;
+    num += (i * data[i]);
+    den += data[i];
   }
-  return value / n;
+  return num / den;
 }
 
 static mtx_result_t mightex_send(mightex_t *m, BYTE * const buf, int len) {
