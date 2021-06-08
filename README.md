@@ -6,7 +6,7 @@ This is a userland driver for the [Mightex TCE-1304-u CCD line cameras](https://
 
 ## What it provides
 
-A simple interface to a Mightex CCD line camera, as simple as possible. Look at the `src/main/test.c' program to see how simple it can be ;)
+A simple interface to a Mightex CCD line camera, as simple as possible. Look at the `src/main/test.c` program to see how simple it can be ;)
 
 The project compiles a static and a dynamic library: the documentation for the library can be build with Doxygen (`make doc`). The dynamic library embeds the `libusb` library, so there are no dependencies. If you rather want to use the static library, then you also need to link in your program the `vendor/lib/libusb-1.0.a` static library.
 
