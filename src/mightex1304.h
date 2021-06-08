@@ -107,6 +107,29 @@ void mightex_close(mightex_t *m);
  */
 mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode);
 
+/**
+ * @brief GPIO register write
+ * 
+ * Write a given value to a GPIO register.
+ * 
+ * @param m 
+ * @param reg register number (0--3)
+ * @param val either 0 or 1
+ */
+void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val);
+
+/**
+ * @brief GPIO register read
+ * 
+ * Read the current value of GPIO register.
+ * 
+ * @param m 
+ * @param reg register number (0--3)
+ * @return BYTE the current GPIO level (0 or 1)
+ */
+BYTE mightex_gpio_read(mightex_t *m, BYTE reg);
+
+
 /** @name Filters and Estimators
  * 
  * These functions allow to automatically apply filters and estimators on a

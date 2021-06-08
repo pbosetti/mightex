@@ -20,6 +20,8 @@
 #define MTX_CMD_EXPTIME 0x31
 #define MTX_CMD_BUFFEREDFRAMES 0x33
 #define MTX_CMD_GETBUFFEREDDATA 0x34
+#define MTX_CMD_GPIOWRITE 0x40
+#define MTX_CMD_GPIOREAD 0x41
 
 #define STRING_LENGTH 14
 
@@ -78,6 +80,13 @@ typedef struct mightex {
   mightex_filter_t *filter;
   mightex_estimator_t *estimator;
 } mightex_t;
+
+//   ____  _        _   _          
+//  / ___|| |_ __ _| |_(_) ___ ___ 
+//  \___ \| __/ _` | __| |/ __/ __|
+//   ___) | || (_| | |_| | (__\__ \
+//  |____/ \__\__,_|\__|_|\___|___/
+                                
 
 static void filter_dark(mightex_t *m, uint16_t *const data, uint16_t len,
                         void *ud) {
@@ -158,56 +167,6 @@ static mtx_result_t mightex_get_info(mightex_t *m) {
   return rc;
 }
 
-mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
-  BYTE mode_b = (BYTE)mode;
-  BYTE buf[3];
-  buf[0] = MTX_CMD_MODE;
-  buf[1] = 0x01;
-  buf[2] = mode_b;
-  return mightex_send(m, buf, sizeof(buf));
-}
-
-char *mightex_serial_no(mightex_t *m) {
-  return (char *)m->device_info.di.serial_no;
-}
-
-char *mightex_version(mightex_t *m) { return m->version; }
-
-uint16_t *mightex_frame_p(mightex_t *m) { return m->data; }
-
-uint16_t *mightex_raw_frame_p(mightex_t *m) {
-  return m->frames[0].frame.image_data;
-}
-
-uint16_t mightex_frame_timestamp(mightex_t *m) {
-  return m->frames[0].frame.time_stamp;
-}
-
-uint16_t mightex_dark_mean(mightex_t *m) { return m->dark_mean; }
-
-// t is in ms
-mtx_result_t mightex_set_exptime(mightex_t *m, float t) {
-  BYTE buf[4];
-  uint16_t val = htons((uint16_t)(t * 10));
-  buf[0] = MTX_CMD_EXPTIME;
-  buf[1] = 0x02;
-  memcpy(buf + 2, &val, sizeof(val));
-  return mightex_send(m, buf, sizeof(buf));
-}
-
-int mightex_get_buffer_count(mightex_t *m) {
-  BYTE buf[3];
-  int rc;
-  buf[0] = MTX_CMD_BUFFEREDFRAMES;
-  buf[1] = 0x01;
-  buf[2] = 0x00;
-  mightex_send(m, buf, 2);
-  rc = mightex_receive(m, buf, sizeof(buf));
-  if (rc <= 0)
-    return rc;
-  return (int)buf[2];
-}
-
 static mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
   BYTE buf[3];
   buf[0] = MTX_CMD_GETBUFFEREDDATA;
@@ -216,23 +175,13 @@ static mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
   return mightex_send(m, buf, sizeof(buf));
 }
 
-mtx_result_t mightex_read_frame(mightex_t *m) {
-  int i, rc;
-  mightex_prepare_buffered_data(m, 1);
-  rc = libusb_bulk_transfer(m->handle, MTX_EP_FRAME, m->frames[0].buf,
-                            sizeof(m->frames[0].frame), NULL, m->timeout);
-  if (rc != LIBUSB_SUCCESS) {
-    return MTX_FAIL;
-  }
-  m->dark_mean = 0;
-  for (i = 0; i < MTX_DARK_PIXELS; i++) {
-    m->dark_mean += m->frames[0].frame.light_shield[i];
-  }
-  m->dark_mean /= MTX_DARK_PIXELS;
-  memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS * sizeof(uint16_t));
-  return MTX_OK;
-}
 
+//   __  __      _   _               _     
+//  |  \/  | ___| |_| |__   ___   __| |___ 
+//  | |\/| |/ _ \ __| '_ \ / _ \ / _` / __|
+//  | |  | |  __/ |_| | | | (_) | (_| \__ \
+//  |_|  |_|\___|\__|_| |_|\___/ \__,_|___/
+                                        
 mightex_t *mightex_new() {
   mightex_t *m = malloc(sizeof(mightex_t));
   int rc;
@@ -335,6 +284,102 @@ void mightex_close(mightex_t *m) {
   free(m);
 }
 
+mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
+  BYTE mode_b = (BYTE)mode;
+  BYTE buf[3] = {MTX_CMD_MODE, 0x01, mode_b};
+  return mightex_send(m, buf, sizeof(buf));
+}
+
+// t is in ms
+mtx_result_t mightex_set_exptime(mightex_t *m, float t) {
+  BYTE buf[4];
+  uint16_t val = htons((uint16_t)(t * 10));
+  buf[0] = MTX_CMD_EXPTIME;
+  buf[1] = 0x02;
+  memcpy(buf + 2, &val, sizeof(val));
+  return mightex_send(m, buf, sizeof(buf));
+}
+
+int mightex_get_buffer_count(mightex_t *m) {
+  int rc;
+  BYTE buf[3] = {MTX_CMD_BUFFEREDFRAMES, 0x01, 0x00};
+  mightex_send(m, buf, 2);
+  rc = mightex_receive(m, buf, sizeof(buf));
+  if (rc <= 0)
+    return rc;
+  return (int)buf[2];
+}
+
+mtx_result_t mightex_read_frame(mightex_t *m) {
+  int i, rc;
+  mightex_prepare_buffered_data(m, 1);
+  rc = libusb_bulk_transfer(m->handle, MTX_EP_FRAME, m->frames[0].buf,
+                            sizeof(m->frames[0].frame), NULL, m->timeout);
+  if (rc != LIBUSB_SUCCESS) {
+    return MTX_FAIL;
+  }
+  m->dark_mean = 0;
+  for (i = 0; i < MTX_DARK_PIXELS; i++) {
+    m->dark_mean += m->frames[0].frame.light_shield[i];
+  }
+  m->dark_mean /= MTX_DARK_PIXELS;
+  memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS * sizeof(uint16_t));
+  return MTX_OK;
+}
+
+void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val) {
+  BYTE buf[4] = {MTX_CMD_GPIOWRITE, 0x02, reg, val};
+  mightex_send(m, buf, sizeof(buf));
+}
+
+BYTE mightex_gpio_read(mightex_t *m, BYTE reg) {
+  int rc;
+  BYTE buf[3] = {MTX_CMD_GPIOREAD, 0x03, reg};
+  mightex_send(m, buf, sizeof(buf));
+  rc = mightex_receive(m, buf, sizeof(buf));
+  if (rc <= 0)
+    return -1;
+  return buf[2];
+}
+
+void mightex_apply_filter(mightex_t *m, void *ud) {
+  if (m->filter)
+    m->filter(m, m->data, MTX_PIXELS, ud);
+}
+
+double mightex_apply_estimator(mightex_t *m, void *ud) {
+  if (m->estimator)
+    return m->estimator(m, m->data, MTX_PIXELS, ud);
+  else
+    return 0.0;
+}
+
+
+//      _                                        
+//     / \   ___ ___ ___  ___ ___  ___  _ __ ___ 
+//    / _ \ / __/ __/ _ \/ __/ __|/ _ \| '__/ __|
+//   / ___ \ (_| (_|  __/\__ \__ \ (_) | |  \__ \
+//  /_/   \_\___\___\___||___/___/\___/|_|  |___/
+                                              
+
+char *mightex_serial_no(mightex_t *m) {
+  return (char *)m->device_info.di.serial_no;
+}
+
+char *mightex_version(mightex_t *m) { return m->version; }
+
+uint16_t *mightex_frame_p(mightex_t *m) { return m->data; }
+
+uint16_t *mightex_raw_frame_p(mightex_t *m) {
+  return m->frames[0].frame.image_data;
+}
+
+uint16_t mightex_frame_timestamp(mightex_t *m) {
+  return m->frames[0].frame.time_stamp;
+}
+
+uint16_t mightex_dark_mean(mightex_t *m) { return m->dark_mean; }
+
 uint16_t mightex_pixel_count(mightex_t *m) { return MTX_PIXELS; }
 
 uint16_t mightex_dark_pixel_count(mightex_t *m) { return MTX_DARK_PIXELS; }
@@ -345,20 +390,9 @@ void mightex_set_filter(mightex_t *m, mightex_filter_t *filter) {
 
 void mightex_reset_filter(mightex_t *m) { m->filter = filter_dark; }
 
-void mightex_apply_filter(mightex_t *m, void *ud) {
-  if (m->filter)
-    m->filter(m, m->data, MTX_PIXELS, ud);
-}
 
 void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator) {
   m->estimator = estimator;
 }
 
 void mightex_reset_estimator(mightex_t *m) { m->estimator = estimator_center; }
-
-double mightex_apply_estimator(mightex_t *m, void *ud) {
-  if (m->estimator)
-    return m->estimator(m, m->data, MTX_PIXELS, ud);
-  else
-    return 0.0;
-}
