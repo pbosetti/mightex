@@ -10,6 +10,11 @@
  * 
  */
 #include <stdlib.h>
+#ifdef _WIN32
+#include <stdint.h>
+#else
+#include <unistd.h>
+#endif // _WIN32
 #include "defines.h"
 
 /**
