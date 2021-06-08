@@ -1,8 +1,8 @@
 # Mightex1304
 
-This is a userland driver for the Mightex TCE-1304-u CCD line cameras. It is based on [libusb](https://libusb.info).
+This is a userland driver for the [Mightex TCE-1304-u CCD line cameras](https://www.mightexsystems.com/product/usb2-0-3648-pixel-16-bit-ccd-line-camera-with-external-trigger/). It is based on [libusb](https://libusb.info).
 
-**Note:** at the moment it is all very preliminary. Do not expect a finished product, although it can prove helpful in understanding how to communicate with the camera using the public protocol provided by Mightex
+**Note:** at the moment it is all very preliminary. Do not expect a finished product, although it can prove helpful in understanding how to communicate with the camera using the public protocol provided by Mightex. The libraries (shared and static) produced by this project, though, are now functional enough to be used directly in your projects.
 
 ## What it provides
 
@@ -23,9 +23,10 @@ Cmake style:
 ```sh
 cmake -Bbuild -H. -DCMAKE_BUILD_TYPE=Release
 make -Cbuild -j4 install
+make -Cbuild doc
 ```
 
-and you will find the compiled files under `products_host`.
+and you will find the compiled files under `products_host` and Doxygen documentation under `doc`.
 
 The project is ready for an easy cross-compilation. See README-xcomp.md for details.
 
