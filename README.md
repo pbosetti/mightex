@@ -18,6 +18,8 @@ At the moment, Linux and OS X. Given that `libusb` is also available on Windows,
 
 ## Build
 
+### Linux and OS X
+
 Cmake style:
 
 ```sh
@@ -30,3 +32,20 @@ and you will find the compiled files under `products_host` and Doxygen documenta
 
 The project is ready for an easy cross-compilation. See README-xcomp.md for details.
 
+### Windows
+
+On Windows, things are a tad more complicated. For starters you need to install:
+
+1. Visual Studio 2019 (Community edition is fine), with Windows C++ SDK.
+2. Git
+3. CMake
+4. **Most importantly** do not use the driver provided by Mightex, it won't work. Instead, you have to use the WinUSB driver: the easiest way to install it is by using the [Zadig tool](https://zadig.akeo.ie/).
+
+Then you shall be able to do:
+
+```sh
+cmake -Bbuild -S. -DBUILD_DOC=no -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j4 -t install
+```
+
+and you'll find all the goodies in `products_host`

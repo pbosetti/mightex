@@ -113,6 +113,7 @@ else() #WIN32
   link_directories(${CMAKE_SOURCE_DIR}/win/lib)
   set(LIBUSB_NAME libusb-1.0.lib)
   set(CMAKE_PLATFORM "Windows")
+  set(NATIVE TRUE)
 endif()
 #   _____           _           _     _____       _        _ _     
 #  |  __ \         (_)         | |   |  __ \     | |      (_) |    
@@ -221,7 +222,7 @@ include(CPack)
 #  |_____/ \___/ \___|_|\_\___|_|  |_| |_|_|\___|
 #                                              
 # if not cross-compiling, create Dockerfile for the target platform
-if(NATIVE)
+if(NATIVE AND NOT WIN32)
   option(ENABLE_MRUBY "Enable build of mruby in container" OFF)
   if(NOT ENABLE_MRUBY)
     message(STATUS "mruby is NOT compiled in the container")
