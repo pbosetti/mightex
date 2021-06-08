@@ -140,7 +140,7 @@ add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
 target_link_options(listusb BEFORE PUBLIC -pthread)
 target_link_libraries(listusb libusb ${FRAMEWORKS})
 
-add_dependencies(test libusb)
+add_dependencies(mightex_static libusb_prj)
 
 list(APPEND TARGETS_LIST
   test listusb
