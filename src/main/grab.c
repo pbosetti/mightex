@@ -71,7 +71,7 @@ int main(int argc, char *const argv[]) {
       printf("Options:\
       \n\t-n:      print no data\
       \n\t-e<val>: set exposure time to val msec (min: 0.1)\
-      ");
+      \n");
       return 0;
     default:
       break;
