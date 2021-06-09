@@ -30,7 +30,7 @@ make -Cbuild doc
 
 and you will find the compiled files under `products_host` and Doxygen documentation under `doc`.
 
-The project is ready for an easy cross-compilation. See README-xcomp.md for details.
+The project is ready for an easy, Docker-based cross-compilation. See README-xcomp.md for details.
 
 ### Windows
 
@@ -52,3 +52,5 @@ and you'll find all the goodies in `products_host`.
 
 If you only want to **use** the library on Windows, perhaps via Matlab, then you 
 need to download a release version of the library (in zip format) and also be sure to have installed the [Microsoft Viaual C++ Redistributable package](https://visualstudio.microsoft.com/downloads/). Also, remember to use the porper WinUSB driver as per the point 4. above.
+
+At the moment, the Docker-based cross compilation is not enabled on Windows.
