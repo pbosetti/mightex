@@ -34,7 +34,7 @@ The project is ready for an easy cross-compilation. See README-xcomp.md for deta
 
 ### Windows
 
-On Windows, things are a tad more complicated. For starters you need to install:
+If you want to build the project on Windows, things are a tad more complicated. For starters you need to install:
 
 1. Visual Studio 2019 (Community edition is fine), with Windows C++ SDK.
 2. Git
@@ -48,4 +48,7 @@ cmake -Bbuild -S. -DBUILD_DOC=no -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j4 -t install
 ```
 
-and you'll find all the goodies in `products_host`
+and you'll find all the goodies in `products_host`.
+
+If you only want to **use** the library on Windows, perhaps via Matlab, then you 
+need to download a release version of the library (in zip format) and also be sure to have installed the [Microsoft Viaual C++ Redistributable package](https://visualstudio.microsoft.com/downloads/). Also, remember to use the porper WinUSB driver as per the point 4. above.

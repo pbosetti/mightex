@@ -3,8 +3,8 @@ classdef mightex < handle
   %   Detailed explanation goes here
   
   properties
-    Library {mustBeTextScalar} = '../products_host/lib/libmightex.so';
-    Header {mustBeTextScalar} = '../src/mightex1304.h';
+    Library {mustBeTextScalar} = '../../lib/libmightex.so';
+    Header {mustBeTextScalar} = '../../include/mightex1304.h';
   end
   
   properties (SetAccess = private, GetAccess = public)

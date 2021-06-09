@@ -179,6 +179,11 @@ install(TARGETS ${TARGETS_LIST}
   ARCHIVE DESTINATION lib/static
   PUBLIC_HEADER DESTINATION include
 )
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
+  DESTINATION interfaces
+  PATTERN "*.asv" EXCLUDE
+  PATTERN "*.pdf" EXCLUDE
+)
 
 #   ____                 
 #  |  _ \  ___   ___ ___ 
@@ -212,7 +217,7 @@ endif (BUILD_DOC AND DOXYGEN_FOUND)
 #  |_|   \__,_|\___|_|\_\__,_|\__, |_|_| |_|\__, |
 #                              __/ |         __/ |
 #                             |___/         |___/ 
-set(CPACK_GENERATOR "STGZ;TGZ")
+set(CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
 set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
 include(CPack)
