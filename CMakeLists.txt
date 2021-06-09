@@ -112,7 +112,7 @@ else() #WIN32
   include_directories(${CMAKE_SOURCE_DIR}/win/include)
   link_directories(${CMAKE_SOURCE_DIR}/win/lib)
   set(LIBUSB_NAME libusb-1.0.lib)
-  set(CMAKE_PLATFORM "Windows")
+  set(TARGET_PLATFORM "Windows")
   set(NATIVE TRUE)
 endif()
 #   _____           _           _     _____       _        _ _     
@@ -144,12 +144,12 @@ target_link_libraries(mightex_shared ${LIBUSB_NAME} ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
-add_executable(test ${SOURCE_DIR}/main/test.c)
-target_link_options(test BEFORE PUBLIC -pthread)
+add_executable(grab ${SOURCE_DIR}/main/grab.c)
+target_link_options(grab BEFORE PUBLIC -pthread)
 if(WIN32)
-  target_link_libraries(test mightex_static)
+  target_link_libraries(grab mightex_static)
 else()
-  target_link_libraries(test mightex_static m)
+  target_link_libraries(grab mightex_static m)
 endif()
 
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
@@ -161,7 +161,7 @@ if (NOT WIN32)
 endif()
 
 list(APPEND TARGETS_LIST
-  test listusb
+  grab listusb
   mightex_static mightex_shared
 )
 

@@ -4,9 +4,9 @@
 #include <stdint.h>
 #else
 #include <unistd.h>
+#include <libgen.h>
 #endif // _WIN32
 #include <math.h>
-#include <libgen.h>
 #include "../getopt.h"
 #include "../mightex1304.h"
 
@@ -59,7 +59,15 @@ int main(int argc, char *const argv[]) {
       break;
     case 'h':
     case '?':
+    #ifdef _WIN32
+    {
+      char basename[_MAX_FNAME];
+      _splitpath(argv[0], NULL, NULL, basename, NULL);
+      printf("%s - based on %s\n", basename, mightex_sw_version());
+    }
+    #else
       printf("%s - based on %s\n", basename((char *)argv[0]), mightex_sw_version());
+    #endif
       printf("Options:\
       \n\t-n:      print no data\
       \n\t-e<val>: set exposure time to val msec (min: 0.1)\
