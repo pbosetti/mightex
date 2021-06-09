@@ -17,7 +17,7 @@ struct stats {
 
 static double mean(uint16_t *const d, uint16_t len) {
   uint16_t i;
-  uint16_t sum = 0;
+  uint32_t sum = 0;
   for (i = 0; i < len; i++) {
     sum += d[i];
   }
