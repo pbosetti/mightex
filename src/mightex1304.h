@@ -13,6 +13,7 @@
 #ifdef _WIN32
 #include <stdint.h>
 #include <Windows.h>
+#define DLLEXPORT __declspec( dllexport )
 #else
 #include <unistd.h>
 #endif // _WIN32
@@ -56,6 +57,7 @@ typedef struct mightex mightex_t;
  * 
  * @return mightex_t* 
  */
+DLLEXPORT
 mightex_t *mightex_new();
 
 /**
@@ -65,6 +67,7 @@ mightex_t *mightex_new();
  * @param t the exposure time, in ms
  * @return mtx_result_t 
  */
+DLLEXPORT
 mtx_result_t mightex_set_exptime(mightex_t *m, float t);
 
 /**
@@ -77,6 +80,7 @@ mtx_result_t mightex_set_exptime(mightex_t *m, float t);
  * @param m the Mightex object
  * @return int 
  */
+DLLEXPORT
 int mightex_get_buffer_count(mightex_t *m);
 
 /**
@@ -91,6 +95,7 @@ int mightex_get_buffer_count(mightex_t *m);
  * @return mtx_result_t 
  * @see mightex_frame_p, mightex_frame_timestamp, mightex_dark_mean
  */
+DLLEXPORT
 mtx_result_t mightex_read_frame(mightex_t *m);
 
 
@@ -101,6 +106,7 @@ mtx_result_t mightex_read_frame(mightex_t *m);
  * 
  * @param m the Mightex object
  */
+DLLEXPORT
 void mightex_close(mightex_t *m);
 
 /**
@@ -111,6 +117,7 @@ void mightex_close(mightex_t *m);
  * @return mtx_result_t 
  * @see mtx_mode_t
  */
+DLLEXPORT
 mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode);
 
 /**
@@ -122,6 +129,7 @@ mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode);
  * @param reg register number (0--3)
  * @param val either 0 or 1
  */
+DLLEXPORT
 void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val);
 
 /**
@@ -133,6 +141,7 @@ void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val);
  * @param reg register number (0--3)
  * @return BYTE the current GPIO level (0 or 1)
  */
+DLLEXPORT
 BYTE mightex_gpio_read(mightex_t *m, BYTE reg);
 
 
@@ -187,6 +196,7 @@ typedef double mightex_estimator_t(mightex_t *m, uint16_t * const data, uint16_t
  * @param m 
  * @param filter the function to be used when calling @ref mightex_apply_filter
  */
+DLLEXPORT
 void mightex_set_filter(mightex_t *m, mightex_filter_t *filter);
 
 /**
@@ -198,6 +208,7 @@ void mightex_set_filter(mightex_t *m, mightex_filter_t *filter);
  * 
  * @param m 
  */
+DLLEXPORT
 void mightex_reset_filter(mightex_t *m);
 
 /**
@@ -208,6 +219,7 @@ void mightex_reset_filter(mightex_t *m);
  * @param m 
  * @param userdata a user provided data (typically a struct pointer)
  */
+DLLEXPORT
 void mightex_apply_filter(mightex_t *m, void *userdata);
 
 /**
@@ -217,6 +229,7 @@ void mightex_apply_filter(mightex_t *m, void *userdata);
  * @param estimator 
  * @note the estimator function works on the **filtered** frame data
  */
+DLLEXPORT
 void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator);
 
 /**
@@ -228,6 +241,7 @@ void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator);
  * 
  * @param m 
  */
+DLLEXPORT
 void mightex_reset_estimator(mightex_t *m);
 
 /**
@@ -237,6 +251,7 @@ void mightex_reset_estimator(mightex_t *m);
  * @param userdata 
  * @return double 
  */
+DLLEXPORT
 double mightex_apply_estimator(mightex_t *m, void *userdata);
 
 /**@}*/
@@ -256,6 +271,7 @@ double mightex_apply_estimator(mightex_t *m, void *userdata);
  * @param m 
  * @return char* a pointer to the serial number string (internally stored)
  */
+DLLEXPORT
 char *mightex_serial_no(mightex_t *m);
 
 /**
@@ -266,6 +282,7 @@ char *mightex_serial_no(mightex_t *m);
  * @param m 
  * @return char* a pointer to the firmware version string (internally stored)
  */
+DLLEXPORT
 char *mightex_version(mightex_t *m);
 
 /**
@@ -277,6 +294,7 @@ char *mightex_version(mightex_t *m);
  * @return char* char* a pointer to the library version string (internally
  *  stored)
  */
+DLLEXPORT
 char *mightex_sw_version();
 
 /**
@@ -288,6 +306,7 @@ char *mightex_sw_version();
  * @param m 
  * @return uint16_t* An array of @ref MTX_PIXELS elements
  */
+DLLEXPORT
 uint16_t *mightex_frame_p(mightex_t *m);
 
 /**
@@ -300,6 +319,7 @@ uint16_t *mightex_frame_p(mightex_t *m);
  * @param m 
  * @return uint16_t* An array of @ref MTX_PIXELS elements
  */
+DLLEXPORT
 uint16_t *mightex_raw_frame_p(mightex_t *m);
 
 
@@ -310,6 +330,7 @@ uint16_t *mightex_raw_frame_p(mightex_t *m);
  * @return uint16_t Timestamp of the last grabbed frame
  * @note The values **are not** compensated for the dark current average!
  */
+DLLEXPORT
 uint16_t mightex_frame_timestamp(mightex_t *m);
 
 /**
@@ -321,6 +342,7 @@ uint16_t mightex_frame_timestamp(mightex_t *m);
  * @param m 
  * @return uint16_t The average dark current value
  */
+DLLEXPORT
 uint16_t mightex_dark_mean(mightex_t *m);
 
 /**
@@ -329,6 +351,7 @@ uint16_t mightex_dark_mean(mightex_t *m);
  * @param m 
  * @return uint16_t 
  */
+DLLEXPORT
 uint16_t mightex_pixel_count(mightex_t *m);
 
 /**
@@ -337,6 +360,7 @@ uint16_t mightex_pixel_count(mightex_t *m);
  * @param m 
  * @return uint16_t 
  */
+DLLEXPORT
 uint16_t mightex_dark_pixel_count(mightex_t *m);
 /**@}*/
 #endif
