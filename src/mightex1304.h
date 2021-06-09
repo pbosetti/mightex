@@ -261,10 +261,23 @@ char *mightex_serial_no(mightex_t *m);
 /**
  * @brief The firmware version of the connected device
  * 
+ * Returns an internally allocated string.
+ * 
  * @param m 
  * @return char* a pointer to the firmware version string (internally stored)
  */
 char *mightex_version(mightex_t *m);
+
+/**
+ * @brief The Mightex library software version and details
+ * 
+ * Returns an internally allocated string.
+ * 
+ * @param m 
+ * @return char* char* a pointer to the library version string (internally
+ *  stored)
+ */
+char *mightex_sw_version();
 
 /**
  * @brief Return the pointer to the raw image storage area

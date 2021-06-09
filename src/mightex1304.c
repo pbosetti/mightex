@@ -1,6 +1,6 @@
 #include "mightex1304.h"
 #ifdef _WIN32
-#pragma comment(lib, "Ws2_32.lib") 
+#pragma comment(lib, "Ws2_32.lib")
 #include <winsock.h>
 #else
 #include <arpa/inet.h>
@@ -65,9 +65,9 @@ typedef union {
 
 typedef union {
 #ifdef _WIN32
-    struct frame {
+  struct frame {
 #else
-    struct __attribute__((__packed__)) frame {
+  struct __attribute__((__packed__)) frame {
 #endif
     uint16_t _dummy1[16];
     uint16_t light_shield[13];
@@ -98,16 +98,16 @@ typedef struct mightex {
   uint16_t data[MTX_PIXELS];
   uint16_t dark_mean;
   char version[12];
+  char sw_version[64];
   mightex_filter_t *filter;
   mightex_estimator_t *estimator;
 } mightex_t;
 
-//   ____  _        _   _          
-//  / ___|| |_ __ _| |_(_) ___ ___ 
+//   ____  _        _   _
+//  / ___|| |_ __ _| |_(_) ___ ___
 //  \___ \| __/ _` | __| |/ __/ __|
 //   ___) | || (_| | |_| | (__\__ \
 //  |____/ \__\__,_|\__|_|\___|___/
-                                
 
 static void filter_dark(mightex_t *m, uint16_t *const data, uint16_t len,
                         void *ud) {
@@ -131,7 +131,7 @@ static double estimator_center(mightex_t *m, uint16_t *const data, uint16_t len,
   return num / den;
 }
 
-static mtx_result_t mightex_send(mightex_t *m, BYTE * const buf, int len) {
+static mtx_result_t mightex_send(mightex_t *m, BYTE *const buf, int len) {
   int rc;
   rc = libusb_bulk_transfer(m->handle, MTX_EP_CMD, buf, len, NULL, m->timeout);
   if (rc != LIBUSB_SUCCESS) {
@@ -141,7 +141,7 @@ static mtx_result_t mightex_send(mightex_t *m, BYTE * const buf, int len) {
   return MTX_OK;
 }
 
-static mtx_result_t mightex_receive(mightex_t *m, BYTE * const buf, int len) {
+static mtx_result_t mightex_receive(mightex_t *m, BYTE *const buf, int len) {
   int rc;
   rc =
       libusb_bulk_transfer(m->handle, MTX_EP_REPLY, buf, len, NULL, m->timeout);
@@ -196,13 +196,12 @@ static mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
   return mightex_send(m, buf, sizeof(buf));
 }
 
-
-//   __  __      _   _               _     
-//  |  \/  | ___| |_| |__   ___   __| |___ 
+//   __  __      _   _               _
+//  |  \/  | ___| |_| |__   ___   __| |___
 //  | |\/| |/ _ \ __| '_ \ / _ \ / _` / __|
 //  | |  | |  __/ |_| | | | (_) | (_| \__ \
 //  |_|  |_|\___|\__|_| |_|\___/ \__,_|___/
-                                        
+
 mightex_t *mightex_new() {
   mightex_t *m = malloc(sizeof(mightex_t));
   int rc;
@@ -214,6 +213,8 @@ mightex_t *mightex_new() {
   m->desc = malloc(sizeof(m->desc));
   m->filter = filter_dark;
   m->estimator = estimator_center;
+  snprintf(m->sw_version, sizeof(m->sw_version), "%s %s %s", GIT_COMMIT_HASH,
+           CMAKE_PLATFORM, CMAKE_BUILD_TYPE);
 
   rc = libusb_init(&m->ctx);
   if (rc < 0)
@@ -222,11 +223,11 @@ mightex_t *mightex_new() {
   rc =
       libusb_set_option(m->ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
   if (rc != LIBUSB_SUCCESS)
-    fprintf(stderr, "Could not set log level (%s).\n", libusb_error_name(rc));
+    fprintf(stderr, "> Could not set log level (%s).\n", libusb_error_name(rc));
 
   cnt = libusb_get_device_list(m->ctx, &devs);
   if (cnt < 0) {
-    fprintf(stderr, "No devices available.\n");
+    fprintf(stderr, "> No devices available.\n");
     libusb_exit(m->ctx);
     return NULL;
   }
@@ -234,7 +235,7 @@ mightex_t *mightex_new() {
   while ((m->dev = devs[i++]) != NULL) {
     rc = libusb_get_device_descriptor(m->dev, m->desc);
     if (rc < 0) {
-      fprintf(stderr, "failed to get device descriptor (%s).",
+      fprintf(stderr, ">>> FATAL: Failed to get device descriptor (%s).",
               libusb_error_name(rc));
       libusb_exit(m->ctx);
       continue;
@@ -244,39 +245,57 @@ mightex_t *mightex_new() {
       device_info_t b;
       memset(&b, 0, sizeof(b));
       rc = libusb_open(m->dev, &m->handle);
-      if (rc != LIBUSB_SUCCESS)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+      if (rc != LIBUSB_SUCCESS) {
+        fprintf(stderr, ">>> FATAL: Could not open device (%s)\n",
                 libusb_error_name(rc));
+#ifdef _WIN32
+        fprintf(
+            stderr,
+            "    Perhaps WinUSB driver has not been installed and selected?\n");
+#endif
+        libusb_exit(m->ctx);
+        return NULL;
+      }
+
       rc = libusb_reset_device(m->handle);
       if (rc != LIBUSB_SUCCESS)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+        fprintf(stderr, ">> Could not reset device (%s)\n",
                 libusb_error_name(rc));
+
       rc = libusb_set_auto_detach_kernel_driver(m->handle, 1);
       if (rc != LIBUSB_ERROR_NOT_SUPPORTED)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+        fprintf(stderr, ">> Could not set auto-detach (%s)\n",
                 libusb_error_name(rc));
+
+      rc = libusb_claim_interface(m->handle, 0);
+      if (rc != LIBUSB_SUCCESS) {
+        fprintf(stderr, ">>> FATAL: Could not claim device interface (%s)\n",
+                libusb_error_name(rc));
+        libusb_close(m->handle);
+        libusb_exit(m->ctx);
+        return NULL;
+      }
+
       rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iManufacturer,
                                               m->manufacturer,
                                               sizeof(m->manufacturer));
       if (rc <= 0)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+        fprintf(stderr, ">> Could nor read device manufacturer (%s)\n",
                 libusb_error_name(rc));
+
       rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iProduct,
                                               m->product, sizeof(m->product));
       if (rc <= 0)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+        fprintf(stderr, ">> Could nor read device name (%s)\n",
                 libusb_error_name(rc));
-      fprintf(stderr, "Found device: %s - %s\n", m->manufacturer, m->product);
-      rc = libusb_claim_interface(m->handle, 0);
-      if (rc != LIBUSB_SUCCESS)
-        fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
-                libusb_error_name(rc));
+
+      fprintf(stderr, "> Found device: %s - %s\n", m->manufacturer, m->product);
 
       mightex_get_version(m);
-      fprintf(stderr, "Version: %s\n", mightex_version(m));
+      fprintf(stderr, "> Version: %s\n", mightex_version(m));
 
       mightex_get_info(m);
-      fprintf(stderr, "SerialNo.: %s\n", mightex_serial_no(m));
+      fprintf(stderr, "> SerialNo.: %s\n", mightex_serial_no(m));
 
       break;
     } else {
@@ -297,7 +316,7 @@ void mightex_close(mightex_t *m) {
   if (m->handle) {
     rc = libusb_release_interface(m->handle, 0);
     if (rc != LIBUSB_SUCCESS)
-      fprintf(stderr, "%s:%d rc: %s\n", __FILE__, __LINE__,
+      fprintf(stderr, ">> Could not release interface (%s)\n",
               libusb_error_name(rc));
     libusb_close(m->handle);
   }
@@ -375,19 +394,19 @@ double mightex_apply_estimator(mightex_t *m, void *ud) {
     return 0.0;
 }
 
-
-//      _                                        
-//     / \   ___ ___ ___  ___ ___  ___  _ __ ___ 
+//      _
+//     / \   ___ ___ ___  ___ ___  ___  _ __ ___
 //    / _ \ / __/ __/ _ \/ __/ __|/ _ \| '__/ __|
 //   / ___ \ (_| (_|  __/\__ \__ \ (_) | |  \__ \
 //  /_/   \_\___\___\___||___/___/\___/|_|  |___/
-                                              
 
 char *mightex_serial_no(mightex_t *m) {
   return (char *)m->device_info.di.serial_no;
 }
 
 char *mightex_version(mightex_t *m) { return m->version; }
+
+char *mightex_sw_version() { return "Mightex1304 v." GIT_COMMIT_HASH " for " CMAKE_PLATFORM ", " CMAKE_BUILD_TYPE " build."; }
 
 uint16_t *mightex_frame_p(mightex_t *m) { return m->data; }
 
@@ -410,7 +429,6 @@ void mightex_set_filter(mightex_t *m, mightex_filter_t *filter) {
 }
 
 void mightex_reset_filter(mightex_t *m) { m->filter = filter_dark; }
-
 
 void mightex_set_estimator(mightex_t *m, mightex_estimator_t *estimator) {
   m->estimator = estimator;

@@ -146,7 +146,11 @@ set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(test ${SOURCE_DIR}/main/test.c)
 target_link_options(test BEFORE PUBLIC -pthread)
-target_link_libraries(test mightex_static)
+if(WIN32)
+  target_link_libraries(test mightex_static)
+else()
+  target_link_libraries(test mightex_static m)
+endif()
 
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
 target_link_options(listusb BEFORE PUBLIC -pthread)
