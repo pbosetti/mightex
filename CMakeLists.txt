@@ -157,7 +157,9 @@ target_link_options(listusb BEFORE PUBLIC -pthread)
 target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS})
 
 if (NOT WIN32)
-  add_dependencies(mightex_static libusb_prj)
+  add_dependencies(mightex_static libusb libusb_prj)
+  add_dependencies(mightex_shared libusb libusb_prj)
+  add_dependencies(listusb libusb libusb_prj)
 endif()
 
 list(APPEND TARGETS_LIST
