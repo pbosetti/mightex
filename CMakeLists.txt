@@ -141,7 +141,7 @@ target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
 target_link_libraries(mightex_shared ${LIBUSB_NAME} ${FRAMEWORKS})
-set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
+set_target_properties(mightex_shared PROPERTIES PREFIX "lib" OUTPUT_NAME "mightex" SUFFIX ".so")
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(grab ${SOURCE_DIR}/main/grab.c)
@@ -182,7 +182,7 @@ endif()
 install(TARGETS ${TARGETS_LIST}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib/static
+  ARCHIVE DESTINATION lib
   PUBLIC_HEADER DESTINATION include
 )
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
