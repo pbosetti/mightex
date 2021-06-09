@@ -16,6 +16,7 @@
 #define DLLEXPORT __declspec( dllexport )
 #else
 #include <unistd.h>
+#define DLLEXPORT
 #endif // _WIN32
 #include "defines.h"
 
