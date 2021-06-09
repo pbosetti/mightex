@@ -136,8 +136,10 @@ configure_file(
 )
 
 # TARGETS
+find_package(Threads REQUIRED)
+
 add_library(mightex_static STATIC ${LIB_SOURCES})
-target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS})
+target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
 target_link_libraries(mightex_shared ${LIBUSB_NAME} ${FRAMEWORKS})
@@ -145,21 +147,23 @@ set_target_properties(mightex_shared PROPERTIES PREFIX "lib" OUTPUT_NAME "mighte
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(grab ${SOURCE_DIR}/main/grab.c)
-target_link_options(grab BEFORE PUBLIC -pthread)
 if(WIN32)
   target_link_libraries(grab mightex_static)
 else()
   target_link_libraries(grab mightex_static m)
 endif()
-
+  
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
-target_link_options(listusb BEFORE PUBLIC -pthread)
 target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS})
-
+  
 if (NOT WIN32)
   add_dependencies(mightex_static libusb libusb_prj)
   add_dependencies(mightex_shared libusb libusb_prj)
   add_dependencies(listusb libusb libusb_prj)
+else()  
+  set_target_properties(grab PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
+  set_target_properties(listusb PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
+  set_target_properties(mightex_shared PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
 endif()
 
 list(APPEND TARGETS_LIST
