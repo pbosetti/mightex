@@ -135,9 +135,19 @@ configure_file(
   ${SOURCE_DIR}/defines.h
 )
 
-# TARGETS
+# libs
+include(CheckLibraryExists)
+check_library_exists(m sqrt "" HAVE_LIB_M)
+if(HAVE_LIB_M)
+  message(STATUS "Including libm")
+  append(EXTRA_LIBS m)
+else()
+  message(STATUS "libm not needed")
+endif()
+
 find_package(Threads REQUIRED)
 
+# TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
 target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -147,11 +157,7 @@ set_target_properties(mightex_shared PROPERTIES PREFIX "lib" OUTPUT_NAME "mighte
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(grab ${SOURCE_DIR}/main/grab.c)
-if(WIN32)
-  target_link_libraries(grab mightex_static)
-else()
-  target_link_libraries(grab mightex_static m)
-endif()
+target_link_libraries(grab mightex_static ${EXTRA_LIBS})
   
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
 target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS})

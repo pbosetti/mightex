@@ -1,6 +1,6 @@
 classdef mightex < handle
-  %MIGHTEX Summary of this class goes here
-  %   Detailed explanation goes here
+  %MIGHTEX Mightex TCE-1304-U interface
+  %   Class that provides a wrapper around the Mightex 1304 library
   
   properties
     Library {mustBeTextScalar} = '../../lib/libmightex.so';
@@ -23,7 +23,7 @@ classdef mightex < handle
   methods
     function obj = mightex(varargin)
       %MIGHTEX Construct an instance of this class
-      %   Detailed explanation goes here
+      %   Optionally, pass path to library and to header file
       if (ispc)
           obj.Library = '../../bin/libmightex.dll';
       elseif(ismac)
@@ -64,6 +64,7 @@ classdef mightex < handle
     end
     
     function delete(obj)
+      %delete Delete resources and close connection with device
       if (obj.IsOpen)
         calllib('libmightex', 'mightex_close', obj.Mtx)
       end
@@ -74,6 +75,7 @@ classdef mightex < handle
     end
     
     function setExposureTime(obj, value)
+      %SetExposureTime Set exposure time to a value in ms (minimum: 0.1 ms)
       obj.ExposureTime = value;
       calllib('libmightex', 'mightex_set_exptime', obj.Mtx, value);
     end
@@ -90,6 +92,7 @@ classdef mightex < handle
     end
     
     function plotFrame(m, thr)
+      %plotFrame Plot the last frame readed
       frame = m.Frame.value;
       frameThr = mightex.threshold(frame, thr);
       center = mightex.center(frameThr);
@@ -108,6 +111,11 @@ classdef mightex < handle
   end
   
   methods (Static)
+    function ver = swVersion()
+      %swVersion The version of the mightex library
+      ver = calllib('libmightex', 'mightex_sw_version');
+    end
+    
     function thrFrame = threshold(frame, level)
       thrFrame = frame;
       thrFrame(frame < level) = 0;

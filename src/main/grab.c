@@ -44,11 +44,11 @@ int main(int argc, char *const argv[]) {
   int n, i;
   uint16_t *raw_data;
   uint16_t *data;
-  int opt, nodata = 0;
+  int opt, nodata = 0, nofilter = 0;
   float exp = 0.1;
   struct stats stats;
 
-  while ((opt = getopt(argc, argv, "e:n?h")) != -1) {
+  while ((opt = getopt(argc, argv, "e:nr?h")) != -1) {
     switch (opt)
     {
     case 'e':
@@ -56,6 +56,9 @@ int main(int argc, char *const argv[]) {
       break;
     case 'n':
       nodata = 1;
+      break;
+    case 'r':
+      nofilter = 1;
       break;
     case 'h':
     case '?':
@@ -71,6 +74,7 @@ int main(int argc, char *const argv[]) {
       printf("Options:\
       \n\t-n:      print no data\
       \n\t-e<val>: set exposure time to val msec (min: 0.1)\
+      \n\t-r:      apply analysis to raw values\
       \n");
       return 0;
     default:
@@ -88,6 +92,10 @@ int main(int argc, char *const argv[]) {
 
   // use custom estimator for calculating standard deviation of dark scene
   mightex_set_estimator(m, stdev);
+
+  if (nofilter) {
+    mightex_set_filter(m, NULL);
+  }
 
   if (mightex_set_exptime(m, exp) != MTX_OK) {
     fprintf(stderr, "Failed setting esposure time\n");
@@ -114,9 +122,9 @@ int main(int argc, char *const argv[]) {
   // read the frame
   mightex_read_frame(m);
   mightex_apply_filter(m, NULL);
+  mightex_apply_estimator(m, &stats);
 
   fprintf(stderr, "Dark current level: %d\n", mightex_dark_mean(m));
-  mightex_apply_estimator(m, &stats);
   fprintf(stderr, "Mean value: %f\n", stats.avg);
   fprintf(stderr, "Std.dev.: %f\n", stats.std);
   fprintf(stderr, "Range: %d - %d\n", stats.min, stats.max);
