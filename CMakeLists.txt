@@ -29,24 +29,26 @@ project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
 # set(CMAKE_BUILD_TYPE Release)
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
-# Libusb
-set(LIBUSB_VERSION 1.0.24)
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(LIBUSB_NO_DEBUG --disable-log)
+if(NOT WIN32)
+  # Libusb
+  set(LIBUSB_VERSION 1.0.24)
+  if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(LIBUSB_NO_DEBUG --disable-log)
+  endif()
+  include(ExternalProject)
+  ExternalProject_Add(libusb_prj
+    URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
+    PREFIX ${CMAKE_SOURCE_DIR}/vendor
+    BUILD_IN_SOURCE TRUE
+    CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
+    BUILD_COMMAND make
+    INSTALL_COMMAND make install 
+  )
+  ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
+  message(STATUS "Installing libusb in ${INSTALL_DIR}")
+  add_library(libusb STATIC IMPORTED)
+  set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
 endif()
-include(ExternalProject)
-ExternalProject_Add(libusb_prj
-  URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
-  PREFIX ${CMAKE_SOURCE_DIR}/vendor
-  BUILD_IN_SOURCE TRUE
-  CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install 
-)
-ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
-message(STATUS "Installing libusb in ${INSTALL_DIR}")
-add_library(libusb STATIC IMPORTED)
-set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -57,54 +59,62 @@ set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-
 #                                                        | |    
 #                                                        |_|    
 # Find out target platform
-execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine OUTPUT_VARIABLE TARGET_PLATFORM) #put into TARGET_PLATFORM result of $ gcc -dumpmachine
-string(REPLACE "\n" "" TARGET_PLATFORM ${TARGET_PLATFORM})
-string(REGEX MATCH mipsel-openwrt-linux-musl IS_MIPSEL ${TARGET_PLATFORM})
-string(REGEX MATCH armv7-unknown-linux-gnueabi IS_ARM7 ${TARGET_PLATFORM})
-string(REGEX MATCH arm-linux-gnueabihf IS_ARM6 ${TARGET_PLATFORM})
-string(REGEX MATCH arm-cortexa8_neon-linux-gnueabihf IS_ARM7A ${TARGET_PLATFORM})
-string(REGEX MATCH aarch64-unknown-linux-gnueabi IS_ARM64 ${TARGET_PLATFORM})
-if (IS_ARM6 OR IS_ARM7 OR IS_ARM7A OR IS_ARM64)
-  set(IS_ARM TRUE)
-endif()
+if (NOT WIN32)
+  execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine OUTPUT_VARIABLE TARGET_PLATFORM) #put into TARGET_PLATFORM result of $ gcc -dumpmachine
+  string(REPLACE "\n" "" TARGET_PLATFORM ${TARGET_PLATFORM})
+  string(REGEX MATCH mipsel-openwrt-linux-musl IS_MIPSEL ${TARGET_PLATFORM})
+  string(REGEX MATCH armv7-unknown-linux-gnueabi IS_ARM7 ${TARGET_PLATFORM})
+  string(REGEX MATCH arm-linux-gnueabihf IS_ARM6 ${TARGET_PLATFORM})
+  string(REGEX MATCH arm-cortexa8_neon-linux-gnueabihf IS_ARM7A ${TARGET_PLATFORM})
+  string(REGEX MATCH aarch64-unknown-linux-gnueabi IS_ARM64 ${TARGET_PLATFORM})
+  if (IS_ARM6 OR IS_ARM7 OR IS_ARM7A OR IS_ARM64)
+    set(IS_ARM TRUE)
+  endif()
 
-# SETUP PATHS AND VARIABLES
-if(IS_MIPSEL)
-  message(STATUS "Cross-building for MIPSEL (cross_root: ${cross_root})")
-  set(LUA_LIB lua)
-  add_definitions(-D_OPENWRT_LINUX=1)
-  include_directories(${cross_root}/include)
-  link_directories(${cross_root}/lib)
-elseif(IS_ARM)
-  message(STATUS "Cross-building for ARM (cross_root: ${cross_root})")
-  set(LINUX TRUE)
-  set(LUA_LIB lua)
-  include_directories(${cross_root}/include ${cross_root}/include/libusb-1.0)
-  link_directories(${cross_root}/lib)
-  add_definitions(-D__ARM7__)
-elseif(UNIX AND NOT APPLE)
-  message(STATUS "Building on Linux")
-  set(LINUX TRUE)
+  # SETUP PATHS AND VARIABLES
+  if(IS_MIPSEL)
+    message(STATUS "Cross-building for MIPSEL (cross_root: ${cross_root})")
+    set(LUA_LIB lua)
+    add_definitions(-D_OPENWRT_LINUX=1)
+    include_directories(${cross_root}/include)
+    link_directories(${cross_root}/lib)
+  elseif(IS_ARM)
+    message(STATUS "Cross-building for ARM (cross_root: ${cross_root})")
+    set(LINUX TRUE)
+    set(LUA_LIB lua)
+    include_directories(${cross_root}/include ${cross_root}/include/libusb-1.0)
+    link_directories(${cross_root}/lib)
+    add_definitions(-D__ARM7__)
+  elseif(UNIX AND NOT APPLE)
+    message(STATUS "Building on Linux")
+    set(LINUX TRUE)
+    set(NATIVE TRUE)
+    set(LUA_LIB lua5.3)
+    include_directories(/usr/include/${LUA_LIB} /usr/local/include ${CMAKE_SOURCE_DIR}/vendor/include)
+    link_directories(/usr/lib/x86_64-linux-gnu ${CMAKE_SOURCE_DIR}/vendor/lib)
+  elseif(APPLE)
+    message(STATUS "Building on Apple OS X")
+    set(LUA_LIB lua)
+    set(NATIVE TRUE)
+    include_directories(/usr/local/include /usr/local/include/lua ${CMAKE_SOURCE_DIR}/vendor/include)
+    link_directories(${CMAKE_CURRENT_LIST_DIR}/vendor/lib)
+    set(FRAMEWORKS "-framework CoreFoundation -framework IOKit")
+  endif()
+
+  # COMPILE OPTIONS
+  add_compile_options(-std=gnu11 -fPIC -D_GNU_SOURCE)
+  if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    message(STATUS "Debug mode, enabling all warnings")
+    add_compile_options(-Wall -Wno-comment)
+  endif()
+  set(LIBUSB_NAME libusb)
+else() #WIN32
+  include_directories(${CMAKE_SOURCE_DIR}/win/include)
+  link_directories(${CMAKE_SOURCE_DIR}/win/lib)
+  set(LIBUSB_NAME libusb-1.0.lib)
+  set(CMAKE_PLATFORM "Windows")
   set(NATIVE TRUE)
-  set(LUA_LIB lua5.3)
-  include_directories(/usr/include/${LUA_LIB} /usr/local/include ${CMAKE_SOURCE_DIR}/vendor/include)
-  link_directories(/usr/lib/x86_64-linux-gnu ${CMAKE_SOURCE_DIR}/vendor/lib)
-elseif(APPLE)
-  message(STATUS "Building on Apple OS X")
-  set(LUA_LIB lua)
-  set(NATIVE TRUE)
-  include_directories(/usr/local/include /usr/local/include/lua ${CMAKE_SOURCE_DIR}/vendor/include)
-  link_directories(${CMAKE_CURRENT_LIST_DIR}/vendor/lib)
-  set(FRAMEWORKS "-framework CoreFoundation -framework IOKit")
 endif()
-
-# COMPILE OPTIONS
-add_compile_options(-std=gnu11 -fPIC -D_GNU_SOURCE)
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  message(STATUS "Debug mode, enabling all warnings")
-  add_compile_options(-Wall -Wno-comment)
-endif()
-
 #   _____           _           _     _____       _        _ _     
 #  |  __ \         (_)         | |   |  __ \     | |      (_) |    
 #  | |__) | __ ___  _  ___  ___| |_  | |  | | ___| |_ __ _ _| |___ 
@@ -127,10 +137,10 @@ configure_file(
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-target_link_libraries(mightex_static libusb ${FRAMEWORKS})
+target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
-target_link_libraries(mightex_shared libusb ${FRAMEWORKS})
+target_link_libraries(mightex_shared ${LIBUSB_NAME} ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" LIBRARY_OUTPUT_NAME mightex SUFFIX ".so")
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
@@ -140,14 +150,17 @@ target_link_libraries(test mightex_static)
 
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
 target_link_options(listusb BEFORE PUBLIC -pthread)
-target_link_libraries(listusb libusb ${FRAMEWORKS})
+target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS})
 
-add_dependencies(mightex_static libusb_prj)
+if (NOT WIN32)
+  add_dependencies(mightex_static libusb_prj)
+endif()
 
 list(APPEND TARGETS_LIST
   test listusb
   mightex_static mightex_shared
 )
+
 
 #   _____           _        _ _ 
 #  |_   _|         | |      | | |
@@ -212,7 +225,7 @@ include(CPack)
 #  |_____/ \___/ \___|_|\_\___|_|  |_| |_|_|\___|
 #                                              
 # if not cross-compiling, create Dockerfile for the target platform
-if(NATIVE)
+if(NATIVE AND NOT WIN32)
   option(ENABLE_MRUBY "Enable build of mruby in container" OFF)
   if(NOT ENABLE_MRUBY)
     message(STATUS "mruby is NOT compiled in the container")

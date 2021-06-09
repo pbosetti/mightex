@@ -1,11 +1,20 @@
 #include "mightex1304.h"
+#ifdef _WIN32
+#pragma comment(lib, "Ws2_32.lib") 
+#include <winsock.h>
+#else
 #include <arpa/inet.h>
+#endif
 #include <assert.h>
 #include <libusb-1.0/libusb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <stdint.h>
+#else
 #include <unistd.h>
+#endif // _WIN32
 
 #define USB_IDVENDOR 0x04B4
 #define USB_IDPRODUCT 0x0328
@@ -26,7 +35,11 @@
 #define STRING_LENGTH 14
 
 typedef union {
+#ifdef _WIN32
+  struct di {
+#else
   struct __attribute__((__packed__)) di {
+#endif
     BYTE rc;
     BYTE len;
     BYTE config_revision;
@@ -38,7 +51,11 @@ typedef union {
 } device_info_t;
 
 typedef union {
+#ifdef _WIN32
+  struct ver {
+#else
   struct __attribute__((__packed__)) ver {
+#endif
     BYTE rc;
     BYTE len;
     BYTE major, minor, rev;
@@ -47,7 +64,11 @@ typedef union {
 } device_version_t;
 
 typedef union {
-  struct __attribute__((__packed__)) frame {
+#ifdef _WIN32
+    struct frame {
+#else
+    struct __attribute__((__packed__)) frame {
+#endif
     uint16_t _dummy1[16];
     uint16_t light_shield[13];
     uint16_t _reserved[3];

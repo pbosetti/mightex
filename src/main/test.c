@@ -2,7 +2,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <stdint.h>
+#else
 #include <unistd.h>
+#endif // _WIN32
+
 #include "../mightex1304.h"
 
 int main(void) {
@@ -23,7 +28,11 @@ int main(void) {
   }
 
   while ((n = mightex_get_buffer_count(m)) <= 0) {
+    #ifdef _WIN32
+    Sleep(10);
+    #else
     usleep(10000);
+    #endif
   }
   fprintf(stderr, "Frame count: %d\n", n);
   int i;
