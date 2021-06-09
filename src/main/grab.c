@@ -62,7 +62,7 @@ int main(int argc, char *const argv[]) {
     #ifdef _WIN32
     {
       char basename[_MAX_FNAME];
-      _splitpath(argv[0], NULL, NULL, basename, NULL);
+      _splitpath_s(argv[0], NULL, 0, NULL, 0, basename, _MAX_FNAME, NULL, 0);
       printf("%s - based on %s\n", basename, mightex_sw_version());
     }
     #else
@@ -71,7 +71,7 @@ int main(int argc, char *const argv[]) {
       printf("Options:\
       \n\t-n:      print no data\
       \n\t-e<val>: set exposure time to val msec (min: 0.1)\
-      ");
+      \n");
       return 0;
     default:
       break;
