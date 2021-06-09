@@ -184,6 +184,11 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
 )
+if(BUILD_DOC)
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/doc
+    DESTINATION doc
+  )
+endif()
 
 #   ____                 
 #  |  _ \  ___   ___ ___ 
