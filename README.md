@@ -14,7 +14,7 @@ The library is designed to make the life easier to you if you want to use it wit
 
 ## Supported platforms
 
-At the moment, Linux and OS X. Given that `libusb` is also available on Windows, I plan to add that platform to the list.
+Linux, OS X, and Windows. For the latter, see the dedicated section in this document.
 
 ## Build
 
