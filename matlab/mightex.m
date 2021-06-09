@@ -24,6 +24,11 @@ classdef mightex < handle
     function obj = mightex(varargin)
       %MIGHTEX Construct an instance of this class
       %   Detailed explanation goes here
+      if (ispc)
+          obj.Library = '../../bin/libmightex.dll';
+      elseif(ismac)
+          obj.Library = '../../lib/libmightex.dylib';
+      end
       if (nargin == 1)
         obj.Library = varargin{1};
       elseif (nargin == 2)
