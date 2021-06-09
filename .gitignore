@@ -6,9 +6,11 @@
 *.asv
 /tmp
 /.vscode
+/.vs
 
 # out-of-source build and install
 /build/*
+/out
 !/build/.gitkeep
 /xbuild/*
 !/xbuild/.gitkeep
