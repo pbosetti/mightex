@@ -145,7 +145,12 @@ else()
   message(STATUS "libm not needed")
 endif()
 
-find_package(Threads REQUIRED)
+include(FindThreads)
+if(Threads_FOUND)
+  message(STATUS "Found Threads library, linking with "${CMAKE_THREAD_LIBS_INIT})
+else()
+  message(STATUS "Thread library not found and not necessary")
+endif()
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
@@ -160,7 +165,7 @@ add_executable(grab ${SOURCE_DIR}/main/grab.c)
 target_link_libraries(grab mightex_static ${EXTRA_LIBS})
   
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
-target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS})
+target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
   
 if (NOT WIN32)
   add_dependencies(mightex_static libusb libusb_prj)
