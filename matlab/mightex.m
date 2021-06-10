@@ -75,9 +75,19 @@ classdef mightex < handle
     end
     
     function setExposureTime(obj, value)
-      %SetExposureTime Set exposure time to a value in ms (minimum: 0.1 ms)
+      %setExposureTime Set exposure time to a value in ms (minimum: 0.1 ms)
       obj.ExposureTime = value;
       calllib('libmightex', 'mightex_set_exptime', obj.Mtx, value);
+    end
+    
+    function m = darkMean(obj)
+      %darkMean Return the average of the shielded pixels values
+      m = calllib('libmightex', 'mightex_dark_mean', obj.Mtx);
+    end
+    
+    function ts = frameTimestamp(obj)
+      %frameTimestamp the timestamp of the last frame
+      ts = calllib('libmightex', 'mightex_frame_timestamp', obj.Mtx);
     end
     
     function [frame, rawFrame, bias] = readFrame(obj)
