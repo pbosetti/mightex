@@ -147,9 +147,13 @@ endif()
 
 include(FindThreads)
 if(Threads_FOUND)
-  message(STATUS "Found Threads library, linking with "${CMAKE_THREAD_LIBS_INIT})
+  if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
+    message(STATUS "Threads library don't need link flag")
+  else()
+    message(STATUS "Found Threads library, linking with "${CMAKE_THREAD_LIBS_INIT})
+  endif()
 else()
-  message(STATUS "Thread library not found and not necessary")
+  message(ERROR "Thread library not found!")
 endif()
 
 # TARGETS
