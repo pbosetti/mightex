@@ -277,7 +277,7 @@ include(CPack)
                         
 enable_testing()
 add_test(grab_help ${CMAKE_CURRENT_BINARY_DIR}/grab -h)
-add_test(listusb_help ${CMAKE_CURRENT_BINARY_DIR}/listusb_help -h)
+add_test(listusb_help ${CMAKE_CURRENT_BINARY_DIR}/listusb -h)
 
 #   _____             _              __ _ _      
 #  |  __ \           | |            / _(_) |     
