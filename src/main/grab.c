@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <stdint.h>
-#include "../getopt.h"
+#include <getopt.h>
 #else
 #include <unistd.h>
 #include <libgen.h>
