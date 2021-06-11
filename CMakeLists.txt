@@ -225,9 +225,15 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
 )
-install(FILES ${CMAKE_CURRENT_LIST_DIR}/vendor/lib/libusb-1.0.a
-  DESTINATION lib
-)
+if(WIN32)
+  install(FILES ${CMAKE_CURRENT_LIST_DIR}/win/lib/libusb-1.0.lib
+    DESTINATION lib
+  )
+else()
+  install(FILES ${CMAKE_CURRENT_LIST_DIR}/vendor/lib/libusb-1.0.a
+    DESTINATION lib
+  )
+endif()
 install(FILES ${SOURCE_DIR}/main/grab.c
   DESTINATION examples
 )
