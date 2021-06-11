@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.16)
 # GIT versioning - It requires at leas one git tag e.g. 0.0.1
 # create it with: git tag -am " " 0.0.1
 execute_process(
-  COMMAND git describe --long --dirty=§
+  COMMAND git describe --long --dirty=X
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_COMMIT_HASH
   OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -136,6 +136,13 @@ set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
 file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
 file(GLOB HEADERS "${SOURCE_DIR}/*.h")
+if(WIN32) # On windows, getopt is missing, provide local implementation
+  file(GLOB WIN_LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/win/src/*.c")
+  file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
+  list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
+  list(APPEND HEADERS ${WIN_HEADERS})
+  message(INFO ${LIB_SOURCES} ${HEADERS})
+endif()
 # generate defines.h, which also contains version numbers matching git tags
 configure_file(
   ${SOURCE_DIR}/defines.h.in
@@ -182,7 +189,7 @@ if (NOT WIN32)
   add_dependencies(mightex_static libusb libusb_prj)
   add_dependencies(mightex_shared libusb libusb_prj)
   add_dependencies(listusb libusb libusb_prj)
-else()  
+else()
   set_target_properties(grab PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(listusb PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(mightex_shared PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")

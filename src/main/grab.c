@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <stdint.h>
+#include "../getopt.h"
 #else
 #include <unistd.h>
 #include <libgen.h>
 #endif // _WIN32
 #include <math.h>
-#include "../getopt.h"
 #include "../mightex1304.h"
 
 struct stats {
