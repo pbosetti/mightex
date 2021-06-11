@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 		} else {
 			printf("Usage %s [-v] [-d </dev/bus/usb/...>]\n", argv[0]);
 			printf("Note use -d to test libusb_wrap_sys_device()\n");
-			return 1;
+			return 0;
 		}
 	}
 
