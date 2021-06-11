@@ -276,8 +276,8 @@ include(CPack)
 #    |_|\___||___/\__|___/
                         
 enable_testing()
-add_test(listusb ${CMAKE_INSTALL_PREFIX}/bin/listusb)
-add_test(grab_help ${CMAKE_INSTALL_PREFIX}/bin/grab -h)
+add_test(listusb ${CMAKE_CURRENT_BINARY_DIR}/listusb)
+add_test(grab_help ${CMAKE_CURRENT_BINARY_DIR}/grab -h)
 
 #   _____             _              __ _ _      
 #  |  __ \           | |            / _(_) |     
