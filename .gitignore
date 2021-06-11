@@ -19,6 +19,7 @@
 /doc
 /vendor/*
 /packages
+/Testing
 
 # Dynamically generated files
 /src/defines.h

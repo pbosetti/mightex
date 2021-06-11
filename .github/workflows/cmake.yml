@@ -41,8 +41,8 @@ jobs:
       run: cmake --build build --config ${{env.BUILD_TYPE}} -t package
     
     - name: Test
-      run: cmake --build build --config ${{env.BUILD_TYPE}} -t test
-      
+      run: ctest --test-dir build --rerun-failed --output-on-failure   
+
     - uses: actions/upload-artifact@v2
       with:
         name: mightex1304-${{env.BUILD_TYPE}}-${{steps.get_version.outputs.VERSION}}
