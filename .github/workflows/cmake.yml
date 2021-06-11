@@ -35,7 +35,22 @@ jobs:
 
     - uses: actions/upload-artifact@v2
       with:
+        name: Linux
         path: |
-          packages/*
+          packages/*Linux*
+          !packages/_CPack_Packages
+    
+    - uses: actions/upload-artifact@v2
+      with:
+        name: MacOS
+        path: |
+          packages/*Darwin*
+          !packages/_CPack_Packages
+    
+    - uses: actions/upload-artifact@v2
+      with:
+        name: Windows
+        path: |
+          packages/*win*
           !packages/_CPack_Packages
         

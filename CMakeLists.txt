@@ -247,7 +247,11 @@ endif (BUILD_DOC AND DOXYGEN_FOUND)
 #  |_|   \__,_|\___|_|\_\__,_|\__, |_|_| |_|\__, |
 #                              __/ |         __/ |
 #                             |___/         |___/ 
-set(CPACK_GENERATOR "STGZ;TGZ;ZIP")
+if(WIN32)
+  set(CPACK_GENERATOR "ZIP")
+else()
+  set(CPACK_GENERATOR "TGZ")
+endif()
 set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
 set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
 set(CPACK_PACKAGE_DIRECTORY ${CMAKE_SOURCE_DIR}/packages)
