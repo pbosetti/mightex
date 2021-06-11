@@ -250,6 +250,8 @@ endif (BUILD_DOC AND DOXYGEN_FOUND)
 set(CPACK_GENERATOR "STGZ;TGZ;ZIP")
 set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
 set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
+set(CPACK_PACKAGE_DIRECTORY ${CMAKE_SOURCE_DIR}/packages)
+set(CPACK_STRIP_FILES TRUE)
 include(CPack)
 
 #   _____             _              __ _ _      
