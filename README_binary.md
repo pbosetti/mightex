@@ -33,5 +33,5 @@ clang grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.
 
 ```sh
 cd examples
-cl grab.c /I..\include /L..\lib ..\lib\libusb-1.0.a ..\lib\libmightex_static.a -o grab
+cl grab.c /I..\include /L..\lib ..\lib\libusb-1.0.lib ..\lib\mightex_static.lib /O grab
 ```
