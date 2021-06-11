@@ -8,7 +8,7 @@
 #include <libgen.h>
 #endif // _WIN32
 #include <math.h>
-#include "../mightex1304.h"
+#include <mightex1304.h>
 
 struct stats {
   double avg, std;

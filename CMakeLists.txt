@@ -122,6 +122,8 @@ else() #WIN32
   set(TARGET_PLATFORM "Windows")
   set(NATIVE TRUE)
 endif()
+include_directories("${CMAKE_SOURCE_DIR}/src")
+
 #   _____           _           _     _____       _        _ _     
 #  |  __ \         (_)         | |   |  __ \     | |      (_) |    
 #  | |__) | __ ___  _  ___  ___| |_  | |  | | ___| |_ __ _ _| |___ 
@@ -222,6 +224,15 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   DESTINATION interfaces
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
+)
+install(FILES ${CMAKE_CURRENT_LIST_DIR}/vendor/lib/libusb-1.0.a
+  DESTINATION lib
+)
+install(FILES ${SOURCE_DIR}/main/grab.c
+  DESTINATION examples
+)
+install(FILES ${CMAKE_CURRENT_LIST_DIR}/README_binary.md ${CMAKE_CURRENT_LIST_DIR}/LICENSE
+  DESTINATION .
 )
 if(BUILD_DOC)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/doc
