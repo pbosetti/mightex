@@ -15,14 +15,21 @@ execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_COMMIT_HASH
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
 execute_process(
   COMMAND git describe --abbrev=0 --tags
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_VERSION_TAG
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
-project(Mightex1304 VERSION ${GIT_VERSION_TAG} LANGUAGES C)
+if("${GIT_VERSION_TAG}" STREQUAL "")
+  message(WARNING "Could not figure out tag")
+  project(Mightex1304 LANGUAGES C)
+else()
+  project(Mightex1304 VERSION "${GIT_VERSION_TAG}" LANGUAGES C)
+endif()
     
 # Override build type (Debug or Release)
 # set(CMAKE_BUILD_TYPE Debug)
@@ -150,7 +157,7 @@ if(Threads_FOUND)
   if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "")
     message(STATUS "Threads library don't need link flag")
   else()
-    message(STATUS "Found Threads library, linking with "${CMAKE_THREAD_LIBS_INIT})
+    message(STATUS "Found Threads library, linking with " ${CMAKE_THREAD_LIBS_INIT})
   endif()
 else()
   message(ERROR "Thread library not found!")
@@ -252,8 +259,12 @@ if(WIN32)
 else()
   set(CPACK_GENERATOR "TGZ")
 endif()
-set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
-set(CPACK_PACKAGE_NAME mightex1304-${CMAKE_BUILD_TYPE})
+if("${GIT_COMMIT_HASH}" STREQUAL "")
+  set(CPACK_PACKAGE_VERSION "no_version")
+else()
+  set(CPACK_PACKAGE_VERSION ${GIT_COMMIT_HASH})
+endif()
+set(CPACK_PACKAGE_NAME "mightex1304-${CMAKE_BUILD_TYPE}")
 set(CPACK_PACKAGE_DIRECTORY ${CMAKE_SOURCE_DIR}/packages)
 set(CPACK_STRIP_FILES TRUE)
 include(CPack)
