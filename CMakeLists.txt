@@ -269,6 +269,16 @@ set(CPACK_PACKAGE_DIRECTORY ${CMAKE_SOURCE_DIR}/packages)
 set(CPACK_STRIP_FILES TRUE)
 include(CPack)
 
+#   _____         _       
+#  |_   _|__  ___| |_ ___ 
+#    | |/ _ \/ __| __/ __|
+#    | |  __/\__ \ |_\__ \
+#    |_|\___||___/\__|___/
+                        
+enable_testing()
+add_test(listusb ${CMAKE_INSTALL_PREFIX}/bin/listusb)
+add_test(grab_help ${CMAKE_INSTALL_PREFIX}/bin/grab -h)
+
 #   _____             _              __ _ _      
 #  |  __ \           | |            / _(_) |     
 #  | |  | | ___   ___| | _____ _ __| |_ _| | ___ 
