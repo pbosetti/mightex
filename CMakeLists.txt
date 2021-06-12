@@ -136,6 +136,11 @@ include_directories("${CMAKE_SOURCE_DIR}/src")
 # expect all sources in /src, except mains
 set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
+# generate defines.h, which also contains version numbers matching git tags
+configure_file(
+  ${SOURCE_DIR}/defines.h.in
+  ${SOURCE_DIR}/defines.h
+)
 file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
 file(GLOB HEADERS "${SOURCE_DIR}/*.h")
 if(WIN32) # On windows, getopt is missing, provide local implementation
@@ -143,13 +148,7 @@ if(WIN32) # On windows, getopt is missing, provide local implementation
   file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
   list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
   list(APPEND HEADERS ${WIN_HEADERS})
-  message(INFO ${LIB_SOURCES} ${HEADERS})
 endif()
-# generate defines.h, which also contains version numbers matching git tags
-configure_file(
-  ${SOURCE_DIR}/defines.h.in
-  ${SOURCE_DIR}/defines.h
-)
 
 # libs
 include(CheckLibraryExists)

@@ -55,3 +55,7 @@ If you only want to **use** the library on Windows, perhaps via Matlab, then you
 need to download a release version of the library (in zip format) and also be sure to have installed the [Microsoft Visual C++ Redistributable package](https://visualstudio.microsoft.com/downloads/). Also, remember to use the proper WinUSB driver as per the point 4. above.
 
 At the moment, **the Docker-based cross compilation is not enabled on Windows**.
+
+## Author
+
+Paolo Bosetti, University of Trento.

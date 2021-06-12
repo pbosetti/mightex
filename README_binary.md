@@ -1,6 +1,6 @@
 # Mightex1304 library - binary version
 
-Hello! this is a precompiled binary version of the [https://github.com/pbosetti/mightex](mightex library) for dealing with Mightex TCE-1304-U USB CCD line cameras.
+Hello! this is a precompiled binary version of the [mightex library](https://github.com/pbosetti/mightex) for dealing with Mightex TCE-1304-U USB CCD line cameras.
 
 If you are interested in other models, have a look at the source repo, for it shall be relatively easy to adapt the library to other similar Mightex CCD line cameras.
 
@@ -35,3 +35,7 @@ clang grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.
 cd examples
 cl grab.c /I..\include /L..\lib ..\lib\libusb-1.0.lib ..\lib\mightex_static.lib /O grab
 ```
+
+## Author
+
+Paolo Bosetti, University of Trento.
