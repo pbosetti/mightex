@@ -231,7 +231,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   PATTERN "*.pdf" EXCLUDE
 )
 install(DIRECTORY ${SOURCE_DIR}/wrappers
-  DESTINATION interfaces/wrappers
+  DESTINATION interfaces
 )
 if(WIN32)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/win/lib/libusb-1.0.lib
