@@ -62,9 +62,9 @@ At the moment, **the Docker-based cross compilation is not enabled on Windows**.
 
 [SWIG](http://swig.org) is a commandline utility that simplifies the creation of C/C++ wrappers to be compiled into binary libraries for many common scripting languages.
 
-This project enables that with a special C++ header that can also be parsed by SWIG: `src/mightex.hh`.
+This project enables that with a special C++ header, which can also be parsed by SWIG: `src/mightex.hh`.
 
-This file also plays as a header only C++ interface to the Mightex1304 library, so if you want to use the librari in a C++ fashion, just `#include "mightex.hh"` and properly link to the libraries, and you are set.
+This file also plays as a header only C++ interface to the Mightex1304 library, so if you want to use the library in a C++ fashion, just `#include "mightex.hh"` and properly link to the libraries, and you are set.
 
 The file also contains some conditional code that enables SWIG to parse it and generate the proper code. Let's see how it works for lua:
 
