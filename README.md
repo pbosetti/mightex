@@ -97,6 +97,8 @@ which shall be clear considering that: `mightex` is the name of the module and `
 
 A Python interface can be rather analogously generated and used with `swig -python -c++ -o mightex_lua.cpp mightex.hpp`.
 
+The binary release already contains wrappers for Lua, Python, and Ruby.
+
 ## Author
 
 Paolo Bosetti, University of Trento.

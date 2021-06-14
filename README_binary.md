@@ -13,6 +13,10 @@ This package contains:
 - interfaces for high-level programming languages (currently, Matlab only)
 - C source examples about how to use the library, in `examples`
 
+## Wrappers
+
+The folder `interfaces/wrappers` contains [SWIG](http://swig.org)-generated interface files for compiling binary extension libraries for Lua, Python, and Ruby.
+
 ## How to compile the examples
 
 ### Linux

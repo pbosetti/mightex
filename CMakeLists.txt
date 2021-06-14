@@ -150,6 +150,12 @@ if(WIN32) # On windows, getopt is missing, provide local implementation
   list(APPEND HEADERS ${WIN_HEADERS})
 endif()
 
+if(NATIVE)
+  execute_process(COMMAND swig -lua -c++ -o ${SOURCE_DIR}/wrappers/mightex_lua.cpp ${SOURCE_DIR}/mightex.hh)
+  execute_process(COMMAND swig -python -c++ -o ${SOURCE_DIR}/wrappers/mightex_py.cpp ${SOURCE_DIR}/mightex.hh)
+  execute_process(COMMAND swig -ruby -c++ -o ${SOURCE_DIR}/wrappers/mightex_rb.cpp ${SOURCE_DIR}/mightex.hh)
+endif()
+
 # libs
 include(CheckLibraryExists)
 check_library_exists(m sqrt "" HAVE_LIB_M)
@@ -223,6 +229,9 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   DESTINATION interfaces
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
+)
+install(DIRECTORY ${SOURCE_DIR}/wrappers
+  DESTINATION interfaces/wrappers
 )
 if(WIN32)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/win/lib/libusb-1.0.lib
