@@ -17,6 +17,8 @@ This package contains:
 
 The folder `interfaces/wrappers` contains [SWIG](http://swig.org)-generated interface files for compiling binary extension libraries for Lua, Python, and Ruby.
 
+Look at the source [README file](https://github.com/pbosetti/mightex/#readme) for how to quickly build and use the Python wrapper.
+
 ## How to compile the examples
 
 ### Linux

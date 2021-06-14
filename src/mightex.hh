@@ -5,7 +5,7 @@
 // clang++ mightex_lua.cpp ../lib/libusb-1.0.a ../lib/libmightex_static.a -I /usr/local/opt/lua@5.3/include/lua -L /usr/local/opt/lua@5.3/lib/ -llua -shared -framework IOKit -framework CoreFoundation -omightex.so 
 %module mightex
 %{
-#include "mightex.hpp"
+#include "mightex.hh"
 %}
 %include "mightex1304.h"
 %include "std_string.i"

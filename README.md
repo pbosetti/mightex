@@ -97,7 +97,28 @@ which shall be clear considering that: `mightex` is the name of the module and `
 
 A Python interface can be rather analogously generated and used with `swig -python -c++ -o mightex_lua.cpp mightex.hpp`.
 
-The binary release already contains wrappers for Lua, Python, and Ruby.
+The binary release already contains wrappers for Lua, Python, and Ruby. In particular, from the binary release you can quickly run the Python library like this:
+
+```sh
+$ cd interfaces/wrappers
+$ python3 setup.py build_ext -fi
+$ python3
+Python 3.9.1 (default, Jan  8 2021, 17:17:43) 
+[Clang 12.0.0 (clang-1200.0.32.28)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import mightex
+>>> m = mightex.Mightex1304()
+> Found device: Mightex - USB-TCD1304-1
+> Version: 1.3.0
+> SerialNo.: 13-201114-002
+>>> m.set_exptime(0.1)
+1
+>>> m.read_frame()
+1
+>>> v = m.frame()
+>>> v[1]
+1955
+```
 
 ## Author
 
