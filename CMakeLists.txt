@@ -143,6 +143,7 @@ configure_file(
 )
 file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
 file(GLOB HEADERS "${SOURCE_DIR}/*.h")
+file(GLOB HEADERS "${SOURCE_DIR}/*.hh")
 if(WIN32) # On windows, getopt is missing, provide local implementation
   file(GLOB WIN_LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/win/src/*.c")
   file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")

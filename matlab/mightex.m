@@ -74,6 +74,10 @@ classdef mightex < handle
       disp("Mightex connection closed. Remember to call 'unloadlibrary libmightex'!");
     end
     
+    function cleanBuffer(obj)
+      calllib('libmightex', 'mightex_set_mode', obj.Mtx, 0);
+    end
+    
     function setExposureTime(obj, value)
       %setExposureTime Set exposure time to a value in ms (minimum: 0.1 ms)
       obj.ExposureTime = value;

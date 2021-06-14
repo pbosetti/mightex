@@ -19,6 +19,10 @@
 #endif // _WIN32
 #include "defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Number of standard pixels
  */
@@ -46,6 +50,8 @@ typedef enum { MTX_NORMAL_MODE = 0, MTX_TRIGGER_MODE = 1 } mtx_mode_t;
  * @brief Standard exit values for library functions
  */
 typedef enum { MTX_FAIL = 0, MTX_OK = 1 } mtx_result_t;
+
+#ifndef SWIG
 
 /**
  * @brief Opaque structure encapsulating the driver
@@ -363,4 +369,11 @@ uint16_t mightex_pixel_count(mightex_t *m);
 DLLEXPORT
 uint16_t mightex_dark_pixel_count(mightex_t *m);
 /**@}*/
+
+#endif //SWIG
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif // double inclusion guard

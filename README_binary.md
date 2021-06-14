@@ -22,12 +22,25 @@ cd examples
 gcc grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.a -pthread -o grab
 ```
 
+If you prefer dynamic linking:
+```sh
+clang grab.c -I../include -L../lib -pthread -lmightex -pthread -o grab
+```
+then move `libmightex.so` in the executable directory, or change `LD_LIBRARY_PATH` suitably.
+
 ### MacOS
 
 ```sh
 cd examples
-clang grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.a -pthread -framework IOKit -framework CoreFoundation -o grab
+clang grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.a -framework IOKit -framework CoreFoundation -o grab
 ```
+
+If you prefer dynamic linking:
+```sh
+clang grab.c -I../include -L../lib -lmightex -pthread -o grab -rpath @executable_path/../lib
+```
+
+Note that the file `libmightex.dylib` is not signed, so you will have to enable it in System Preferences > Security and Privacy.
 
 ### Windows
 

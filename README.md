@@ -13,6 +13,8 @@ The project compiles a static and a dynamic library: the documentation for the l
 
 The library is designed to make the life easier to you if you want to use it within an interpreted language via FFI. As an example, the `matlab` folder contains a Matlab class that wraps the library. I plan to add FFI examples for Python and Ruby too.
 
+The project also enables quick creation of binary language extensions for scripting languages via [SWIG](http://swig.org). See later on.
+
 ## Supported platforms
 
 Linux, OS X, and Windows. For the latter, see the dedicated section in this document.
@@ -55,6 +57,45 @@ If you only want to **use** the library on Windows, perhaps via Matlab, then you
 need to download a release version of the library (in zip format) and also be sure to have installed the [Microsoft Visual C++ Redistributable package](https://visualstudio.microsoft.com/downloads/). Also, remember to use the proper WinUSB driver as per the point 4. above.
 
 At the moment, **the Docker-based cross compilation is not enabled on Windows**.
+
+## SWIG support
+
+[SWIG](http://swig.org) is a commandline utility that simplifies the creation of C/C++ wrappers to be compiled into binary libraries for many common scripting languages.
+
+This project enables that with a special C++ header that can also be parsed by SWIG: `src/mightex.hh`.
+
+This file also plays as a header only C++ interface to the Mightex1304 library, so if you want to use the librari in a C++ fashion, just `#include "mightex.hh"` and properly link to the libraries, and you are set.
+
+The file also contains some conditional code that enables SWIG to parse it and generate the proper code. Let's see how it works for lua:
+
+```sh
+$ cd products_host/include
+$ swig -lua -c++ -o mightex_lua.cpp mightex.hpp 
+```
+
+this generates the source file `mightex_lua.cpp`, which can be compiled into a shared object run-time loadable by the lua interpreter:
+
+```sh
+$ clang++ mightex_lua.cpp -shared -I /usr/local/opt/lua@5.3/include/lua -L /usr/local/opt/lua@5.3/lib/ -llua -framework IOKit -framework CoreFoundation ../lib/libusb-1.0.a ../lib/libmightex_static.a -omightex.so
+# mightex.so is created...
+$ lua -l mightex # this starts the interpreter loading the mightex library
+Lua 5.3.5  Copyright (C) 1994-2018 Lua.org, PUC-Rio
+> mightex.version()
+Mightex1304 v.0.2.2-9-g8337fbc for x86_64-apple-darwin19.6.0, Release build.
+> m = mightex.Mightex1304()
+> Found device: Mightex - USB-TCD1304-1
+> Version: 1.3.0
+> SerialNo.: 13-201114-002
+> m:read_frame()
+1.0
+> v = m:frame()
+> v[0]
+2039.0
+```
+
+which shall be clear considering that: `mightex` is the name of the module and `Mightex1304` is the name of the class, so `mightex.version()` is a module function and `m:read_frame()` is an object method.
+
+A Python interface can be rather analogously generated and used with `swig -python -c++ -o mightex_lua.cpp mightex.hpp`.
 
 ## Author
 
