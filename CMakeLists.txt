@@ -250,7 +250,7 @@ install(FILES ${CMAKE_CURRENT_LIST_DIR}/README_binary.md ${CMAKE_CURRENT_LIST_DI
 )
 if(BUILD_DOC)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/doc
-    DESTINATION doc
+    DESTINATION .
   )
 endif()
 

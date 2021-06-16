@@ -12,6 +12,7 @@ This package contains:
 - simple compiled programs, under `bin`
 - interfaces for high-level programming languages (currently, Matlab only)
 - C source examples about how to use the library, in `examples`
+- documentation, under `doc/html`
 
 ## Wrappers
 

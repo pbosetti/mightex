@@ -20,6 +20,14 @@
  * This library allow to acquire "images" (actually lines of pixels) from a 
  * Mightex TCE-1304-U CCD line camera. It relies on [libusb](http://libusb.info)
  * for talking to the device.
+ * 
+ * The library is implemented in pure C. It also exposes a C++ interface, 
+ * provided by the header @ref mightex.hh that implements the class @ref 
+ * Mightex1304. 
+ * 
+ * The same header can also be used for 
+ * generating binary extensions (wrappers) for many different scripting 
+ * languages via [SWIG](https://swig.org).
  */
 
 #ifndef DEFINES_H

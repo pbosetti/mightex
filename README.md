@@ -70,7 +70,7 @@ The file also contains some conditional code that enables SWIG to parse it and g
 
 ```sh
 $ cd products_host/include
-$ swig -lua -c++ -o mightex_lua.cpp mightex.hpp 
+$ swig -lua -c++ -o mightex_lua.cpp mightex.hh
 ```
 
 this generates the source file `mightex_lua.cpp`, which can be compiled into a shared object run-time loadable by the lua interpreter:
