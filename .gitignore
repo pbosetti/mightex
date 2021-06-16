@@ -23,6 +23,8 @@
 
 # Dynamically generated files
 /src/defines.h
+/src/wrappers/*.*
+!/src/wrappers/setup.py
 
 # Docker related
 /arm*

@@ -136,20 +136,25 @@ include_directories("${CMAKE_SOURCE_DIR}/src")
 # expect all sources in /src, except mains
 set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
-file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
-file(GLOB HEADERS "${SOURCE_DIR}/*.h")
-if(WIN32) # On windows, getopt is missing, provide local implementation
-  file(GLOB WIN_LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/win/src/*.c")
-  file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
-  list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
-  list(APPEND HEADERS ${WIN_HEADERS})
-  message(INFO ${LIB_SOURCES} ${HEADERS})
-endif()
 # generate defines.h, which also contains version numbers matching git tags
 configure_file(
   ${SOURCE_DIR}/defines.h.in
   ${SOURCE_DIR}/defines.h
 )
+file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
+file(GLOB HEADERS "${SOURCE_DIR}/*.h" "${SOURCE_DIR}/*.hh")
+if(WIN32) # On windows, getopt is missing, provide local implementation
+  file(GLOB WIN_LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/win/src/*.c")
+  file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
+  list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
+  list(APPEND HEADERS ${WIN_HEADERS})
+endif()
+
+if(NATIVE)
+  execute_process(COMMAND swig -lua -c++ -o ${SOURCE_DIR}/wrappers/mightex_lua.cpp ${SOURCE_DIR}/mightex.hh)
+  execute_process(COMMAND swig -python -c++ -o ${SOURCE_DIR}/wrappers/mightex_py.cpp ${SOURCE_DIR}/mightex.hh)
+  execute_process(COMMAND swig -ruby -c++ -o ${SOURCE_DIR}/wrappers/mightex_rb.cpp ${SOURCE_DIR}/mightex.hh)
+endif()
 
 # libs
 include(CheckLibraryExists)
@@ -224,6 +229,9 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   DESTINATION interfaces
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
+)
+install(DIRECTORY ${SOURCE_DIR}/wrappers
+  DESTINATION interfaces
 )
 if(WIN32)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/win/lib/libusb-1.0.lib
