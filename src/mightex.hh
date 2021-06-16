@@ -124,16 +124,16 @@ public:
   /**
    * @brief Return the number of pixels in the sensor
    * 
-   * @return uint16_t 
+   * @return unsigned int 
    */
-  uint16_t pixel_count() { return MTX_PIXELS; }
+  unsigned int pixel_count() { return MTX_PIXELS; }
 
   /**
    * @brief Return the number of shielded pixels on the sensor
    * 
-   * @return int 
+   * @return unsigned int 
    */
-  int dark_pixel_count() { return MTX_DARK_PIXELS; }
+  unsigned int dark_pixel_count() { return MTX_DARK_PIXELS; }
 
   /**
    * @brief Set the exposure time
