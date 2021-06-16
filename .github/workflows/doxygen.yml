@@ -25,7 +25,7 @@ jobs:
         fetch-depth: 0
     
     - name: Install Doxygen
-      run: apt install doxygen
+      run: sudo apt install doxygen
       shell: bash
 
     - name: Get the version
