@@ -170,9 +170,9 @@ public:
    * This returns the averaged value of the @ref MTX_DARK_PIXELS. This value
    * gives an estimate of the sensor dark current.
    * 
-   * @return int 
+   * @return unsigned int 
    */
-  int dark_mean() { return (int)mightex_dark_mean(m); }
+  unsigned int dark_mean() { return (unsigned int)mightex_dark_mean(m); }
 
   /**
    * @brief Return the timestamp of the last read frame
