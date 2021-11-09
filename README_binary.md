@@ -37,6 +37,17 @@ then move `libmightex.so` in the executable directory, or change `LD_LIBRARY_PAT
 
 ### MacOS
 
+**Note**: for safety reasons, MacOS tags downloaded executables from unknown developers as potentially unsafe. This includes compiled libraries. In order to allow Python or Matlab to use the provided libraries, you need to "untaint" them befor using (first time only):
+
+```sh
+cd <path to the unzipped package>
+xattr -dr com.apple.quarantine .
+```
+
+This command removes the extended attribute `com.apple.quarantine` recursively to the current folder and to every file and subfolder in it.
+
+Now you can use the precompiled libraries as follows:
+
 ```sh
 cd examples
 clang grab.c -I../include -L../lib ../lib/libusb-1.0.a ../lib/libmightex_static.a -framework IOKit -framework CoreFoundation -o grab
