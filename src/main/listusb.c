@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 int verbose = 0;
 
@@ -44,19 +44,24 @@ static void print_endpoint(const struct libusb_endpoint_descriptor *endpoint)
 	printf("        bSynchAddress:       %u\n", endpoint->bSynchAddress);
 
 	for (i = 0; i < endpoint->extra_length;) {
+		uint8_t desc_len = endpoint->extra[i];
+
+		/* Malformed descriptor (zero length, or truncated type byte):
+		 * bail out instead of spinning forever / reading out of bounds. */
+		if (desc_len < 2 || i + 1 >= endpoint->extra_length)
+			break;
+
 		if (LIBUSB_DT_SS_ENDPOINT_COMPANION == endpoint->extra[i + 1]) {
 			struct libusb_ss_endpoint_companion_descriptor *ep_comp;
 
 			ret = libusb_get_ss_endpoint_companion_descriptor(NULL, endpoint, &ep_comp);
-			if (LIBUSB_SUCCESS != ret)
-				continue;
-
-			print_endpoint_comp(ep_comp);
-
-			libusb_free_ss_endpoint_companion_descriptor(ep_comp);
+			if (LIBUSB_SUCCESS == ret) {
+				print_endpoint_comp(ep_comp);
+				libusb_free_ss_endpoint_companion_descriptor(ep_comp);
+			}
 		}
 
-		i += endpoint->extra[i];
+		i += desc_len;
 	}
 }
 

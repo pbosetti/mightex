@@ -9,7 +9,7 @@
 /.vs
 
 # out-of-source build and install
-/build/*
+/build*/*
 /out
 !/build/.gitkeep
 /xbuild/*
@@ -17,7 +17,6 @@
 /products/*
 /products_host/*
 /doc
-/vendor/*
 /packages
 /Testing
 
@@ -30,3 +29,4 @@
 /arm*
 /mipsel
 /Dockerfile
+.Rproj.user

@@ -64,7 +64,7 @@ typedef struct mightex mightex_t;
  * @return mightex_t* 
  */
 DLLEXPORT
-mightex_t *mightex_new();
+mightex_t *mightex_new(void);
 
 /**
  * @brief Set exposure time, in milliseconds
@@ -143,12 +143,12 @@ void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val);
  * 
  * Read the current value of GPIO register.
  * 
- * @param m 
+ * @param m
  * @param reg register number (0--3)
- * @return BYTE the current GPIO level (0 or 1)
+ * @return int the current GPIO level (0 or 1), or a negative value on error
  */
 DLLEXPORT
-BYTE mightex_gpio_read(mightex_t *m, BYTE reg);
+int mightex_gpio_read(mightex_t *m, BYTE reg);
 
 
 /** @name Filters and Estimators
@@ -296,33 +296,33 @@ char *mightex_version(mightex_t *m);
  * 
  * Returns an internally allocated string.
  * 
- * @param m 
+ * @param m
  * @return char* char* a pointer to the library version string (internally
  *  stored)
  */
 DLLEXPORT
-char *mightex_sw_version();
+char *mightex_sw_version(void);
 
 /**
- * @brief Return the pointer to the raw image storage area
- * 
- * The last frame, as collected with @ref mightex_read_frame, is stored as an
- * array of `uint16_t` in the location pointed by the returned pointer.
- * 
- * @param m 
+ * @brief Return the pointer to the filtered image storage area
+ *
+ * The last frame, as collected with @ref mightex_read_frame, is copied as an
+ * array of `uint16_t` in the location pointed by the returned pointer. This
+ * array of data is filtered upon calling @ref mightex_apply_filter.
+ *
+ * @param m
  * @return uint16_t* An array of @ref MTX_PIXELS elements
  */
 DLLEXPORT
 uint16_t *mightex_frame_p(mightex_t *m);
 
 /**
- * @brief Return the pointer to the filtered image storage area
- * 
- * The last frame, as collected with @ref mightex_read_frame, is copied as an
- * array of `uint16_t` in the location pointed by the returned pointer. This
- * array of data is filtered upon calling @ref mightex_apply_filter.
- * 
- * @param m 
+ * @brief Return the pointer to the raw image storage area
+ *
+ * The last frame, as collected with @ref mightex_read_frame, is stored as an
+ * array of `uint16_t` in the location pointed by the returned pointer.
+ *
+ * @param m
  * @return uint16_t* An array of @ref MTX_PIXELS elements
  */
 DLLEXPORT

@@ -36,7 +36,7 @@ static double stdev(mightex_t *m, uint16_t *const data, uint16_t len,
     s->max = s->max > data[i] ? s->max: data[i];
     s->std += pow(data[i] - s->avg, 2);
   }
-  s->std = sqrt(s->std / len - 1);
+  s->std = sqrt(s->std / (len - 1));
   return s->std;
 }
 
@@ -45,15 +45,21 @@ int main(int argc, char *const argv[]) {
   uint16_t *raw_data;
   uint16_t *data;
   int opt, nodata = 0, nofilter = 0;
-  float exp = 0.1;
-  struct stats stats;
+  float exposure = 0.1;
+  struct stats stats = {0};
 
   while ((opt = getopt(argc, argv, "e:nr?h")) != -1) {
     switch (opt)
     {
-    case 'e':
-      exp = atof(optarg);
+    case 'e': {
+      char *endptr;
+      exposure = strtof(optarg, &endptr);
+      if (endptr == optarg) {
+        fprintf(stderr, "Invalid exposure time: %s\n", optarg);
+        return EXIT_FAILURE;
+      }
       break;
+    }
     case 'n':
       nodata = 1;
       break;
@@ -97,10 +103,10 @@ int main(int argc, char *const argv[]) {
     mightex_set_filter(m, NULL);
   }
 
-  if (mightex_set_exptime(m, exp) != MTX_OK) {
+  if (mightex_set_exptime(m, exposure) != MTX_OK) {
     fprintf(stderr, "Failed setting esposure time\n");
   }
-  fprintf(stderr, "Esposure time set to %.1f ms\n", exp);
+  fprintf(stderr, "Esposure time set to %.1f ms\n", exposure);
 
   if (mightex_set_mode(m, MTX_NORMAL_MODE) != MTX_OK) {
     fprintf(stderr, "Failed setting mode\n");
@@ -111,16 +117,25 @@ int main(int argc, char *const argv[]) {
   data = mightex_frame_p(m);
 
   // wait for a frame to be available
-  while ((n = mightex_get_buffer_count(m)) <= 0) {
+  while ((n = mightex_get_buffer_count(m)) == 0) {
 #ifdef _WIN32
     Sleep(10);
 #else
     usleep(10000);
 #endif
   }
+  if (n < 0) {
+    fprintf(stderr, "Error reading buffer count, exiting.\n");
+    mightex_close(m);
+    exit(EXIT_FAILURE);
+  }
 
   // read the frame
-  mightex_read_frame(m);
+  if (mightex_read_frame(m) != MTX_OK) {
+    fprintf(stderr, "Failed reading frame, exiting.\n");
+    mightex_close(m);
+    exit(EXIT_FAILURE);
+  }
   mightex_apply_filter(m, NULL);
   mightex_apply_estimator(m, &stats);
 

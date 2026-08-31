@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #endif
 #include <assert.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +58,7 @@ typedef union {
     BYTE len;
     BYTE major, minor, rev;
   } version;
-  BYTE buf[sizeof(struct di)];
+  BYTE buf[sizeof(struct ver)];
 } device_version_t;
 
 typedef union {
@@ -86,7 +86,7 @@ typedef struct mightex {
   libusb_device *dev;
   libusb_device_handle *handle;
   libusb_context *ctx;
-  struct libusb_device_descriptor *desc;
+  struct libusb_device_descriptor desc;
   unsigned char manufacturer[256];
   unsigned char product[256];
   unsigned int timeout;
@@ -97,6 +97,7 @@ typedef struct mightex {
   uint16_t dark_mean;
   char version[12];
   char sw_version[64];
+  char serial_no[STRING_LENGTH + 1];
   mightex_filter_t *filter;
   mightex_estimator_t *estimator;
 } mightex_t;
@@ -110,7 +111,7 @@ typedef struct mightex {
 static void filter_dark(mightex_t *m, uint16_t *const data, uint16_t len,
                         void *ud) {
   register uint16_t i = 0;
-  for (i = 0; i < MTX_PIXELS; i++) {
+  for (i = 0; i < len; i++) {
     data[i] = data[i] < m->dark_mean ? 0 : data[i] - m->dark_mean;
   }
 }
@@ -120,13 +121,13 @@ static double estimator_center(mightex_t *m, uint16_t *const data, uint16_t len,
   register uint16_t i = 0;
   double num = 0, den = 0;
   uint16_t thr = m->dark_mean * 3;
-  for (i = 0; i < MTX_PIXELS; i++) {
+  for (i = 0; i < len; i++) {
     if (data[i] < thr)
       continue;
     num += (i * data[i]);
     den += data[i];
   }
-  return num / den;
+  return den > 0 ? num / den : 0.0;
 }
 
 static mtx_result_t mightex_send(mightex_t *m, BYTE *const buf, int len) {
@@ -154,7 +155,7 @@ static mtx_result_t mightex_get_version(mightex_t *m) {
   int rc;
   device_version_t *dv = &m->device_version;
   // request
-  memset(dv, 0, sizeof(device_info_t));
+  memset(dv, 0, sizeof(device_version_t));
   dv->buf[0] = MTX_CMD_FIRMWARE;
   dv->buf[1] = 0x01;
   dv->buf[2] = 0x02;
@@ -162,7 +163,7 @@ static mtx_result_t mightex_get_version(mightex_t *m) {
   if (rc != MTX_OK)
     return MTX_FAIL;
   // reply
-  memset(dv, 0, sizeof(device_info_t));
+  memset(dv, 0, sizeof(device_version_t));
   rc = mightex_receive(m, dv->buf, sizeof(dv->version));
   snprintf(m->version, sizeof(m->version), "%d.%d.%d", dv->version.major,
            dv->version.minor, dv->version.rev);
@@ -183,6 +184,12 @@ static mtx_result_t mightex_get_info(mightex_t *m) {
   // reply
   memset(di, 0, sizeof(device_info_t));
   rc = mightex_receive(m, di->buf, sizeof(device_info_t));
+  if (rc != MTX_OK)
+    return MTX_FAIL;
+  // di->di.serial_no is not guaranteed to be NUL-terminated by the device,
+  // so copy it into a buffer with a reserved terminator byte.
+  memcpy(m->serial_no, di->di.serial_no, STRING_LENGTH);
+  m->serial_no[STRING_LENGTH] = '\0';
   return rc;
 }
 
@@ -200,23 +207,23 @@ static mtx_result_t mightex_prepare_buffered_data(mightex_t *m, BYTE n) {
 //  | |  | |  __/ |_| | | | (_) | (_| \__ \
 //  |_|  |_|\___|\__|_| |_|\___/ \__,_|___/
 
-mightex_t *mightex_new() {
-  mightex_t *m = malloc(sizeof(mightex_t));
+mightex_t *mightex_new(void) {
+  mightex_t *m = calloc(1, sizeof(mightex_t));
   int rc;
   ssize_t cnt, i = 0;
   libusb_device **devs;
 
   m->timeout = MTX_TIMEOUT;
-  m->dark_mean = 0;
-  m->desc = malloc(sizeof(m->desc));
   m->filter = filter_dark;
   m->estimator = estimator_center;
   snprintf(m->sw_version, sizeof(m->sw_version), "%s %s %s", GIT_COMMIT_HASH,
            CMAKE_PLATFORM, CMAKE_BUILD_TYPE);
 
   rc = libusb_init(&m->ctx);
-  if (rc < 0)
+  if (rc < 0) {
+    free(m);
     return NULL;
+  }
 
   rc =
       libusb_set_option(m->ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
@@ -227,21 +234,19 @@ mightex_t *mightex_new() {
   if (cnt < 0) {
     fprintf(stderr, "> No devices available.\n");
     libusb_exit(m->ctx);
+    free(m);
     return NULL;
   }
 
   while ((m->dev = devs[i++]) != NULL) {
-    rc = libusb_get_device_descriptor(m->dev, m->desc);
+    rc = libusb_get_device_descriptor(m->dev, &m->desc);
     if (rc < 0) {
       fprintf(stderr, ">>> FATAL: Failed to get device descriptor (%s).",
               libusb_error_name(rc));
-      libusb_exit(m->ctx);
       continue;
     }
-    if (m->desc->idVendor == USB_IDVENDOR &&
-        m->desc->idProduct == USB_IDPRODUCT) {
-      device_info_t b;
-      memset(&b, 0, sizeof(b));
+    if (m->desc.idVendor == USB_IDVENDOR &&
+        m->desc.idProduct == USB_IDPRODUCT) {
       rc = libusb_open(m->dev, &m->handle);
       if (rc != LIBUSB_SUCCESS) {
         fprintf(stderr, ">>> FATAL: Could not open device (%s)\n",
@@ -251,7 +256,9 @@ mightex_t *mightex_new() {
             stderr,
             "    Perhaps WinUSB driver has not been installed and selected?\n");
 #endif
+        libusb_free_device_list(devs, 1);
         libusb_exit(m->ctx);
+        free(m);
         return NULL;
       }
 
@@ -261,7 +268,7 @@ mightex_t *mightex_new() {
                 libusb_error_name(rc));
 
       rc = libusb_set_auto_detach_kernel_driver(m->handle, 1);
-      if (rc != LIBUSB_ERROR_NOT_SUPPORTED)
+      if (rc != LIBUSB_SUCCESS && rc != LIBUSB_ERROR_NOT_SUPPORTED)
         fprintf(stderr, ">> Could not set auto-detach (%s)\n",
                 libusb_error_name(rc));
 
@@ -269,19 +276,21 @@ mightex_t *mightex_new() {
       if (rc != LIBUSB_SUCCESS) {
         fprintf(stderr, ">>> FATAL: Could not claim device interface (%s)\n",
                 libusb_error_name(rc));
+        libusb_free_device_list(devs, 1);
         libusb_close(m->handle);
         libusb_exit(m->ctx);
+        free(m);
         return NULL;
       }
 
-      rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iManufacturer,
+      rc = libusb_get_string_descriptor_ascii(m->handle, m->desc.iManufacturer,
                                               m->manufacturer,
                                               sizeof(m->manufacturer));
       if (rc <= 0)
         fprintf(stderr, ">> Could nor read device manufacturer (%s)\n",
                 libusb_error_name(rc));
 
-      rc = libusb_get_string_descriptor_ascii(m->handle, m->desc->iProduct,
+      rc = libusb_get_string_descriptor_ascii(m->handle, m->desc.iProduct,
                                               m->product, sizeof(m->product));
       if (rc <= 0)
         fprintf(stderr, ">> Could nor read device name (%s)\n",
@@ -302,7 +311,9 @@ mightex_t *mightex_new() {
   }
   libusb_free_device_list(devs, 1);
   if (m->dev == NULL) {
-    m = NULL;
+    libusb_exit(m->ctx);
+    free(m);
+    return NULL;
   }
   return m;
 }
@@ -341,26 +352,30 @@ mtx_result_t mightex_set_exptime(mightex_t *m, float t) {
 int mightex_get_buffer_count(mightex_t *m) {
   int rc;
   BYTE buf[3] = {MTX_CMD_BUFFEREDFRAMES, 0x01, 0x00};
-  mightex_send(m, buf, 2);
+  if (mightex_send(m, buf, 2) != MTX_OK)
+    return -1;
   rc = mightex_receive(m, buf, sizeof(buf));
-  if (rc <= 0)
-    return rc;
+  if (rc != MTX_OK)
+    return -1;
   return (int)buf[2];
 }
 
 mtx_result_t mightex_read_frame(mightex_t *m) {
-  int i, rc;
-  mightex_prepare_buffered_data(m, 1);
+  int i, rc, actual_length = 0;
+  uint32_t dark_sum = 0;
+  if (mightex_prepare_buffered_data(m, 1) != MTX_OK)
+    return MTX_FAIL;
   rc = libusb_bulk_transfer(m->handle, MTX_EP_FRAME, m->frames[0].buf,
-                            sizeof(m->frames[0].frame), NULL, m->timeout);
-  if (rc != LIBUSB_SUCCESS) {
+                            sizeof(m->frames[0].frame), &actual_length,
+                            m->timeout);
+  if (rc != LIBUSB_SUCCESS ||
+      actual_length != (int)sizeof(m->frames[0].frame)) {
     return MTX_FAIL;
   }
-  m->dark_mean = 0;
   for (i = 0; i < MTX_DARK_PIXELS; i++) {
-    m->dark_mean += m->frames[0].frame.light_shield[i];
+    dark_sum += m->frames[0].frame.light_shield[i];
   }
-  m->dark_mean /= MTX_DARK_PIXELS;
+  m->dark_mean = (uint16_t)(dark_sum / MTX_DARK_PIXELS);
   memcpy(m->data, m->frames[0].frame.image_data, MTX_PIXELS * sizeof(uint16_t));
   return MTX_OK;
 }
@@ -370,12 +385,13 @@ void mightex_gpio_write(mightex_t *m, BYTE reg, BYTE val) {
   mightex_send(m, buf, sizeof(buf));
 }
 
-BYTE mightex_gpio_read(mightex_t *m, BYTE reg) {
+int mightex_gpio_read(mightex_t *m, BYTE reg) {
   int rc;
   BYTE buf[3] = {MTX_CMD_GPIOREAD, 0x03, reg};
-  mightex_send(m, buf, sizeof(buf));
+  if (mightex_send(m, buf, sizeof(buf)) != MTX_OK)
+    return -1;
   rc = mightex_receive(m, buf, sizeof(buf));
-  if (rc <= 0)
+  if (rc != MTX_OK)
     return -1;
   return buf[2];
 }
@@ -399,7 +415,7 @@ double mightex_apply_estimator(mightex_t *m, void *ud) {
 //  /_/   \_\___\___\___||___/___/\___/|_|  |___/
 
 char *mightex_serial_no(mightex_t *m) {
-  return (char *)m->device_info.di.serial_no;
+  return m->serial_no;
 }
 
 char *mightex_version(mightex_t *m) { return m->version; }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 
 #   _____          _ _           _                        
 #  |  __ \        | (_)         (_)                       
@@ -36,26 +36,20 @@ endif()
 # set(CMAKE_BUILD_TYPE Release)
 message(STATUS "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
-if(NOT WIN32)
-  # Libusb
-  set(LIBUSB_VERSION 1.0.24)
-  if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(LIBUSB_NO_DEBUG --disable-log)
-  endif()
-  include(ExternalProject)
-  ExternalProject_Add(libusb_prj
-    URL https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2
-    PREFIX ${CMAKE_SOURCE_DIR}/vendor
-    BUILD_IN_SOURCE TRUE
-    CONFIGURE_COMMAND ./configure --prefix=${CMAKE_SOURCE_DIR}/vendor --enable-udev=no --with-pic -enable-shared=no ${LIBUSB_NO_DEBUG}
-    BUILD_COMMAND make
-    INSTALL_COMMAND make install 
-  )
-  ExternalProject_Get_Property(libusb_prj INSTALL_DIR)
-  message(STATUS "Installing libusb in ${INSTALL_DIR}")
-  add_library(libusb STATIC IMPORTED)
-  set_property(TARGET libusb PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/libusb-1.0.a)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Libusb
+include(FetchContent)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(LIBUSB_ENABLE_LOGGING OFF)
 endif()
+set(LIBUSB_INSTALL_TARGETS OFF)
+FetchContent_Declare(libusb
+  GIT_REPOSITORY https://github.com/libusb/libusb-cmake
+  GIT_TAG HEAD
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(libusb)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -97,14 +91,13 @@ if (NOT WIN32)
     set(LINUX TRUE)
     set(NATIVE TRUE)
     set(LUA_LIB lua5.3)
-    include_directories(/usr/include/${LUA_LIB} /usr/local/include ${CMAKE_SOURCE_DIR}/vendor/include)
-    link_directories(/usr/lib/x86_64-linux-gnu ${CMAKE_SOURCE_DIR}/vendor/lib)
+    include_directories(/usr/include/${LUA_LIB} /usr/local/include)
+    link_directories(/usr/lib/x86_64-linux-gnu)
   elseif(APPLE)
     message(STATUS "Building on Apple OS X")
     set(LUA_LIB lua)
     set(NATIVE TRUE)
-    include_directories(/usr/local/include /usr/local/include/lua ${CMAKE_SOURCE_DIR}/vendor/include)
-    link_directories(${CMAKE_CURRENT_LIST_DIR}/vendor/lib)
+    include_directories(/usr/local/include /usr/local/include/lua)
     set(FRAMEWORKS "-framework CoreFoundation -framework IOKit")
   endif()
 
@@ -114,11 +107,9 @@ if (NOT WIN32)
     message(STATUS "Debug mode, enabling all warnings")
     add_compile_options(-Wall -Wno-comment)
   endif()
-  set(LIBUSB_NAME libusb)
 else() #WIN32
   include_directories(${CMAKE_SOURCE_DIR}/win/include)
   link_directories(${CMAKE_SOURCE_DIR}/win/lib)
-  set(LIBUSB_NAME libusb-1.0.lib)
   set(TARGET_PLATFORM "Windows")
   set(NATIVE TRUE)
 endif()
@@ -135,7 +126,6 @@ include_directories("${CMAKE_SOURCE_DIR}/src")
 # FILES
 # expect all sources in /src, except mains
 set(SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
-set(VENDOR ${CMAKE_CURRENT_LIST_DIR}/vendor)
 # generate defines.h, which also contains version numbers matching git tags
 configure_file(
   ${SOURCE_DIR}/defines.h.in
@@ -148,12 +138,6 @@ if(WIN32) # On windows, getopt is missing, provide local implementation
   file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
   list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
   list(APPEND HEADERS ${WIN_HEADERS})
-endif()
-
-if(NATIVE)
-  execute_process(COMMAND swig -lua -c++ -o ${SOURCE_DIR}/wrappers/mightex_lua.cpp ${SOURCE_DIR}/mightex.hh)
-  execute_process(COMMAND swig -python -c++ -o ${SOURCE_DIR}/wrappers/mightex_py.cpp ${SOURCE_DIR}/mightex.hh)
-  execute_process(COMMAND swig -ruby -c++ -o ${SOURCE_DIR}/wrappers/mightex_rb.cpp ${SOURCE_DIR}/mightex.hh)
 endif()
 
 # libs
@@ -179,24 +163,20 @@ endif()
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-target_link_libraries(mightex_static ${LIBUSB_NAME} ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(mightex_static libusb::usb-1.0 ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
-target_link_libraries(mightex_shared ${LIBUSB_NAME} ${FRAMEWORKS})
+target_link_libraries(mightex_shared libusb::usb-1.0 ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" OUTPUT_NAME "mightex")
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 add_executable(grab ${SOURCE_DIR}/main/grab.c)
 target_link_libraries(grab mightex_static ${EXTRA_LIBS})
-  
+
 add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
-target_link_libraries(listusb ${LIBUSB_NAME} ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
-  
-if (NOT WIN32)
-  add_dependencies(mightex_static libusb libusb_prj)
-  add_dependencies(mightex_shared libusb libusb_prj)
-  add_dependencies(listusb libusb libusb_prj)
-else()
+target_link_libraries(listusb libusb::usb-1.0 ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
+
+if(WIN32)
   set_target_properties(grab PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(listusb PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(mightex_shared PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
@@ -230,18 +210,6 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
 )
-install(DIRECTORY ${SOURCE_DIR}/wrappers
-  DESTINATION interfaces
-)
-if(WIN32)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/win/lib/libusb-1.0.lib
-    DESTINATION lib
-  )
-else()
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/vendor/lib/libusb-1.0.a
-    DESTINATION lib
-  )
-endif()
 install(FILES ${SOURCE_DIR}/main/grab.c
   DESTINATION examples
 )
@@ -311,43 +279,3 @@ enable_testing()
 add_test(grab_help ${CMAKE_CURRENT_BINARY_DIR}/grab -h)
 add_test(listusb_help ${CMAKE_CURRENT_BINARY_DIR}/listusb -h)
 
-#   _____             _              __ _ _      
-#  |  __ \           | |            / _(_) |     
-#  | |  | | ___   ___| | _____ _ __| |_ _| | ___ 
-#  | |  | |/ _ \ / __| |/ / _ \ '__|  _| | |/ _ \
-#  | |__| | (_) | (__|   <  __/ |  | | | | |  __/
-#  |_____/ \___/ \___|_|\_\___|_|  |_| |_|_|\___|
-#                                              
-# if not cross-compiling, create Dockerfile for the target platform
-if(NATIVE AND NOT WIN32)
-  option(ENABLE_MRUBY "Enable build of mruby in container" OFF)
-  if(NOT ENABLE_MRUBY)
-    message(STATUS "mruby is NOT compiled in the container")
-    set(COMMENT_ENABLE_MRUBY "#")
-  endif()
-  option(ENABLE_OPENBLAS "Enable build of OpenBLAS in container" OFF)
-  if(NOT ENABLE_OPENBLAS)
-    message(STATUS "OpenBLAS is NOT compiled in the container")
-    set(COMMENT_ENABLE_OPENBLAS "#")
-  endif()
-  option(KEEP_BUILD_DIR "Do not delete build dir in Docker container" OFF)
-  if(KEEP_BUILD_DIR)
-    message(STATUS "Build dir is NOT deleted after compilation")
-    set(COMMENT_BUILD_DIR "#")
-  endif()
-  set(TARGET_NAME CACHE STRING "Select TARGET platform")
-  if(NOT TARGET_NAME)
-    set(TARGET_NAME "armv7")
-  endif()
-  set_property(CACHE TARGET_NAME PROPERTY STRINGS mipsel armv6 armv7 armv7a arm64)
-  configure_file(
-    ${CMAKE_HOME_DIRECTORY}/Dockerfile.in
-    ${CMAKE_HOME_DIRECTORY}/Dockerfile
-    @ONLY
-  )
-  message(STATUS "Host Dockerfile generated for target ${TARGET_NAME}")
-  message(STATUS "Building of mruby (libmruby.a) is: ${ENABLE_MRUBY}")
-  message(STATUS "Keep the build root directory: ${KEEP_BUILD_DIR}")
-  message(STATUS "Build with: docker build -t ${TARGET_NAME} .")
-  message(STATUS "then:       docker run --rm ${TARGET_NAME} > ${TARGET_NAME} && chmod a+x ${TARGET_NAME}")
-endif()
