@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <libusb.h>
+#include <cxxopts.hpp>
+#include <iostream>
+#include <string>
 
 int verbose = 0;
 
@@ -274,38 +277,50 @@ static int test_wrapped_device(const char *device_name)
 
 int main(int argc, char *argv[])
 {
-	const char *device_name = NULL;
-	libusb_device **devs;
-	ssize_t cnt;
-	int r, i;
+	cxxopts::Options options(argv[0], "libusb device lister (based on testlibusb)");
+	options.add_options()
+		("v,verbose", "verbose output",
+		 cxxopts::value<bool>()->default_value("false"))
+		("d,device", "test libusb_wrap_sys_device() on this device node "
+		 "(e.g. /dev/bus/usb/001/002)", cxxopts::value<std::string>())
+		("h,help", "print usage");
 
-	for (i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "-v")) {
-			verbose = 1;
-		} else if (!strcmp(argv[i], "-d") && (i + 1) < argc) {
-			i++;
-			device_name = argv[i];
-		} else {
-			printf("Usage %s [-v] [-d </dev/bus/usb/...>]\n", argv[0]);
-			printf("Note use -d to test libusb_wrap_sys_device()\n");
-			return 0;
-		}
+	cxxopts::ParseResult result;
+	try {
+		result = options.parse(argc, argv);
+	} catch (const cxxopts::exceptions::exception &e) {
+		std::cerr << "Invalid arguments: " << e.what() << "\n";
+		return 1;
 	}
 
-	r = libusb_init(NULL);
+	if (result.count("help")) {
+		std::cout << options.help() << std::endl;
+		return 0;
+	}
+
+	verbose = result["verbose"].as<bool>() ? 1 : 0;
+	std::string device_name_holder;
+	const char *device_name = NULL;
+	if (result.count("device")) {
+		device_name_holder = result["device"].as<std::string>();
+		device_name = device_name_holder.c_str();
+	}
+
+	int r = libusb_init(NULL);
 	if (r < 0)
 		return r;
 
 	if (device_name) {
 		r = test_wrapped_device(device_name);
 	} else {
-		cnt = libusb_get_device_list(NULL, &devs);
+		libusb_device **devs;
+		ssize_t cnt = libusb_get_device_list(NULL, &devs);
 		if (cnt < 0) {
 			libusb_exit(NULL);
 			return 1;
 		}
 
-		for (i = 0; devs[i]; i++)
+		for (int i = 0; devs[i]; i++)
 			print_device(devs[i], NULL);
 
 		libusb_free_device_list(devs, 1);

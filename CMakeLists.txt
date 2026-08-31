@@ -26,11 +26,14 @@ execute_process(
 )
 if("${GIT_VERSION_TAG}" STREQUAL "")
   message(WARNING "Could not figure out tag")
-  project(Mightex1304 LANGUAGES C)
+  project(Mightex1304 LANGUAGES C CXX)
 else()
-  project(Mightex1304 VERSION "${GIT_VERSION_TAG}" LANGUAGES C)
+  project(Mightex1304 VERSION "${GIT_VERSION_TAG}" LANGUAGES C CXX)
 endif()
-    
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Override build type (Debug or Release)
 # set(CMAKE_BUILD_TYPE Debug)
 # set(CMAKE_BUILD_TYPE Release)
@@ -50,6 +53,20 @@ FetchContent_Declare(libusb
   GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(libusb)
+
+# cxxopts - CLI parsing for grab/listusb
+FetchContent_Declare(cxxopts
+  GIT_REPOSITORY https://github.com/jarro2783/cxxopts
+  GIT_TAG v3.3.1
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(cxxopts)
+
+# Header-only Mightex C++20 library (include/mightex/mightex.hpp)
+add_library(mightex_cpp INTERFACE)
+target_include_directories(mightex_cpp INTERFACE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(mightex_cpp INTERFACE libusb::usb-1.0)
+target_compile_features(mightex_cpp INTERFACE cxx_std_20)
 
 #    _____                           _____                      
 #   / ____|                         / ____|                     
@@ -102,7 +119,7 @@ if (NOT WIN32)
   endif()
 
   # COMPILE OPTIONS
-  add_compile_options(-std=gnu11 -fPIC -D_GNU_SOURCE)
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-std=gnu11> -fPIC -D_GNU_SOURCE)
   if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Debug mode, enabling all warnings")
     add_compile_options(-Wall -Wno-comment)
@@ -131,14 +148,8 @@ configure_file(
   ${SOURCE_DIR}/defines.h.in
   ${SOURCE_DIR}/defines.h
 )
-file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.c")
+file(GLOB LIB_SOURCES "${SOURCE_DIR}/*.cpp")
 file(GLOB HEADERS "${SOURCE_DIR}/*.h" "${SOURCE_DIR}/*.hh")
-if(WIN32) # On windows, getopt is missing, provide local implementation
-  file(GLOB WIN_LIB_SOURCES "${CMAKE_CURRENT_LIST_DIR}/win/src/*.c")
-  file(GLOB WIN_HEADERS "${CMAKE_CURRENT_LIST_DIR}/win/include/*.h")
-  list(APPEND LIB_SOURCES ${WIN_LIB_SOURCES})
-  list(APPEND HEADERS ${WIN_HEADERS})
-endif()
 
 # libs
 include(CheckLibraryExists)
@@ -163,18 +174,18 @@ endif()
 
 # TARGETS
 add_library(mightex_static STATIC ${LIB_SOURCES})
-target_link_libraries(mightex_static libusb::usb-1.0 ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(mightex_static mightex_cpp ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
 add_library(mightex_shared SHARED ${LIB_SOURCES})
-target_link_libraries(mightex_shared libusb::usb-1.0 ${FRAMEWORKS})
+target_link_libraries(mightex_shared mightex_cpp ${FRAMEWORKS})
 set_target_properties(mightex_shared PROPERTIES PREFIX "lib" OUTPUT_NAME "mightex")
 set_target_properties(mightex_shared PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
-add_executable(grab ${SOURCE_DIR}/main/grab.c)
-target_link_libraries(grab mightex_static ${EXTRA_LIBS})
+add_executable(grab ${SOURCE_DIR}/main/grab.cpp)
+target_link_libraries(grab mightex_cpp cxxopts::cxxopts ${EXTRA_LIBS})
 
-add_executable(listusb ${SOURCE_DIR}/main/listusb.c)
-target_link_libraries(listusb libusb::usb-1.0 ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(listusb ${SOURCE_DIR}/main/listusb.cpp)
+target_link_libraries(listusb libusb::usb-1.0 cxxopts::cxxopts ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
 if(WIN32)
   set_target_properties(grab PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
@@ -210,7 +221,10 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
   PATTERN "*.asv" EXCLUDE
   PATTERN "*.pdf" EXCLUDE
 )
-install(FILES ${SOURCE_DIR}/main/grab.c
+install(FILES ${CMAKE_SOURCE_DIR}/include/mightex/mightex.hpp
+  DESTINATION include/mightex
+)
+install(FILES ${SOURCE_DIR}/main/grab.cpp
   DESTINATION examples
 )
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/README_binary.md ${CMAKE_CURRENT_LIST_DIR}/LICENSE
