@@ -198,6 +198,9 @@ int main(int argc, char *argv[]) {
       ("fullscale", "scale the plot's vertical axis to 0..max theoretical "
        "pixel value, instead of auto-scaling to the frame's own max",
        cxxopts::value<bool>()->default_value("false"))
+      ("reset", "reset the device (software equivalent of unplug/replug) "
+       "before use; can help if pixels get stuck at max value",
+       cxxopts::value<bool>()->default_value("false"))
       ("h,help", "print usage");
   // clang-format on
 
@@ -254,6 +257,16 @@ int main(int argc, char *argv[]) {
     std::cerr << "No Mightex camera detected or unable to connect: "
               << e.what() << "\n";
     return EXIT_FAILURE;
+  }
+
+  if (result["reset"].as<bool>()) {
+    try {
+      cam->reset_device();
+      std::cerr << "Device reset.\n";
+    } catch (const std::exception &e) {
+      std::cerr << "Failed resetting device: " << e.what() << "\n";
+      return EXIT_FAILURE;
+    }
   }
 
   Stats stats;

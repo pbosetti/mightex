@@ -67,11 +67,24 @@ DLLEXPORT
 mightex_t *mightex_new(void);
 
 /**
+ * @brief Reset the device (software equivalent of unplug/replug)
+ *
+ * Issues a USB port reset. Useful to recover from a wedged device state
+ * (observed symptom: the first few pixels stuck at their max value)
+ * without physically unplugging the camera.
+ *
+ * @param m the Mightex object
+ * @return mtx_result_t
+ */
+DLLEXPORT
+mtx_result_t mightex_reset_device(mightex_t *m);
+
+/**
  * @brief Set exposure time, in milliseconds
- * 
+ *
  * @param m the Mightex object
  * @param t the exposure time, in ms
- * @return mtx_result_t 
+ * @return mtx_result_t
  */
 DLLEXPORT
 mtx_result_t mightex_set_exptime(mightex_t *m, float t);

@@ -70,6 +70,15 @@ mtx_result_t mightex_set_mode(mightex_t *m, mtx_mode_t mode) {
   }
 }
 
+mtx_result_t mightex_reset_device(mightex_t *m) {
+  try {
+    m->cam.reset_device();
+    return MTX_OK;
+  } catch (const std::exception &) {
+    return MTX_FAIL;
+  }
+}
+
 mtx_result_t mightex_set_exptime(mightex_t *m, float t) {
   try {
     m->cam.set_exposure_time(t);

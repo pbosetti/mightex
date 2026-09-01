@@ -255,6 +255,25 @@ public:
     send(buf);
   }
 
+  /// Issues a USB port reset -- the software equivalent of unplugging and
+  /// replugging the cable. Useful to recover from a wedged device state
+  /// (observed symptom: the first few pixels stuck at their max value).
+  /// libusb automatically restores the claimed interface across the reset
+  /// as long as the device's configuration hasn't changed, which holds for
+  /// this device.
+  /// @throws UsbError if the reset fails, or if the device re-enumerated
+  /// with a different configuration -- in that (rare) case this Camera's
+  /// handle is no longer usable and a new Camera must be constructed.
+  void reset_device() {
+    int rc = libusb_reset_device(_handle.get());
+    if (rc == LIBUSB_ERROR_NOT_FOUND)
+      throw UsbError("device reset caused it to re-enumerate with a "
+                      "different configuration; construct a new Camera",
+                      rc);
+    if (rc != LIBUSB_SUCCESS)
+      throw UsbError("device reset failed", rc);
+  }
+
   /// Number of frames currently held in the camera's on-board buffer (0-4).
   /// @throws UsbError on any transport or device-reported failure -- unlike
   /// the C API this ported from, there is no ambiguous sentinel value: a

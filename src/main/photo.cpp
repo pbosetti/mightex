@@ -332,6 +332,9 @@ int main(int argc, char *argv[]) {
        cxxopts::value<std::string>()->default_value("png"))
       ("o,out", "output file basename",
        cxxopts::value<std::string>()->default_value("photo"))
+      ("reset", "reset the device (software equivalent of unplug/replug) "
+       "before use; can help if pixels get stuck at max value",
+       cxxopts::value<bool>()->default_value("false"))
       ("h,help", "print usage");
   // clang-format on
 
@@ -407,6 +410,16 @@ int main(int argc, char *argv[]) {
     std::cerr << "No Mightex camera detected or unable to connect: "
               << e.what() << "\n";
     return EXIT_FAILURE;
+  }
+
+  if (result["reset"].as<bool>()) {
+    try {
+      cam->reset_device();
+      std::cerr << "Device reset.\n";
+    } catch (const std::exception &e) {
+      std::cerr << "Failed resetting device: " << e.what() << "\n";
+      return EXIT_FAILURE;
+    }
   }
 
   try {
