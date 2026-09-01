@@ -34,6 +34,11 @@ inline constexpr std::size_t Pixels = 3648;
 /// current; their average is subtracted from the standard pixels.
 inline constexpr std::size_t DarkPixels = 13;
 
+/// Maximum raw pixel (ADC) value before the datasheet considers the sensor
+/// "Over Exposured" -- the practical full-scale ceiling for this camera,
+/// well below the 16-bit field's own 0xFFFF range.
+inline constexpr uint16_t MaxPixelValue = 0xC000;
+
 /// Camera operating mode.
 enum class Mode : uint8_t { Normal = 0, Trigger = 1 };
 
