@@ -3,6 +3,7 @@
  * @brief Grabs a single frame from a Mightex TCE-1304-U camera and prints
  * basic statistics (and, optionally, the frame data) to stdout.
  */
+#include "cli_common.hpp"
 #include "defines.h"
 
 #include <algorithm>
@@ -54,31 +55,7 @@ double stdev(std::span<const uint16_t> data, Stats &s) {
   return s.std;
 }
 
-/// Parses an exposure time given either as a plain value in milliseconds
-/// (e.g. "5", "0.1") or as a photographic shutter fraction of a second
-/// (e.g. "1/125", meaning 1000/125 = 8 ms).
-float parse_exposure_ms(const std::string &s) {
-  auto slash = s.find('/');
-  if (slash != std::string::npos) {
-    std::string num_str = s.substr(0, slash);
-    std::string den_str = s.substr(slash + 1);
-    char *end_num = nullptr, *end_den = nullptr;
-    double num = std::strtod(num_str.c_str(), &end_num);
-    double den = std::strtod(den_str.c_str(), &end_den);
-    bool num_ok =
-        !num_str.empty() && end_num == num_str.c_str() + num_str.size();
-    bool den_ok =
-        !den_str.empty() && end_den == den_str.c_str() + den_str.size();
-    if (!num_ok || !den_ok || den == 0)
-      throw std::invalid_argument("invalid exposure fraction '" + s + "'");
-    return static_cast<float>((num / den) * 1000.0); // seconds -> ms
-  }
-  char *end = nullptr;
-  float ms = std::strtof(s.c_str(), &end);
-  if (s.empty() || end != s.c_str() + s.size())
-    throw std::invalid_argument("invalid exposure value '" + s + "'");
-  return ms;
-}
+using mightex_cli::parse_exposure_ms;
 
 /// Parses a "LINESxCOLS" plot size, e.g. "10x80".
 std::pair<int, int> parse_plot_dims(const std::string &s) {

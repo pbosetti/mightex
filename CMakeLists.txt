@@ -54,13 +54,27 @@ FetchContent_Declare(libusb
 )
 FetchContent_MakeAvailable(libusb)
 
-# cxxopts - CLI parsing for grab/listusb
+# cxxopts - CLI parsing for grab/listusb/photo
 FetchContent_Declare(cxxopts
   GIT_REPOSITORY https://github.com/jarro2783/cxxopts
   GIT_TAG v3.3.1
   GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(cxxopts)
+
+# lodepng - 16-bit grayscale PNG encoding for `photo`. Two files, no
+# CMakeLists.txt and no tagged releases upstream, so it's populated (not
+# add_subdirectory'd) and wrapped in our own library target, pinned to a
+# specific commit for reproducibility.
+FetchContent_Declare(lodepng
+  GIT_REPOSITORY https://github.com/lvandeve/lodepng
+  GIT_TAG ed6fe5825c6a4fbb7f58ab35a4231c7543cd452a
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(lodepng)
+add_library(lodepng STATIC ${lodepng_SOURCE_DIR}/lodepng.cpp)
+target_include_directories(lodepng PUBLIC ${lodepng_SOURCE_DIR})
+target_compile_features(lodepng PUBLIC cxx_std_20)
 
 # Header-only Mightex C++20 library (include/mightex/mightex.hpp)
 add_library(mightex_cpp INTERFACE)
@@ -187,14 +201,18 @@ target_link_libraries(grab mightex_cpp cxxopts::cxxopts ${EXTRA_LIBS})
 add_executable(listusb ${SOURCE_DIR}/main/listusb.cpp)
 target_link_libraries(listusb libusb::usb-1.0 cxxopts::cxxopts ${FRAMEWORKS} ${CMAKE_THREAD_LIBS_INIT})
 
+add_executable(photo ${SOURCE_DIR}/main/photo.cpp)
+target_link_libraries(photo mightex_cpp cxxopts::cxxopts lodepng ${EXTRA_LIBS})
+
 if(WIN32)
   set_target_properties(grab PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(listusb PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
+  set_target_properties(photo PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
   set_target_properties(mightex_shared PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT")
 endif()
 
 list(APPEND TARGETS_LIST
-  grab listusb
+  grab listusb photo
   mightex_static mightex_shared
 )
 
@@ -224,7 +242,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/matlab
 install(FILES ${CMAKE_SOURCE_DIR}/include/mightex/mightex.hpp
   DESTINATION include/mightex
 )
-install(FILES ${SOURCE_DIR}/main/grab.cpp
+install(FILES ${SOURCE_DIR}/main/grab.cpp ${SOURCE_DIR}/main/photo.cpp
+        ${SOURCE_DIR}/main/cli_common.hpp
   DESTINATION examples
 )
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/README_binary.md ${CMAKE_CURRENT_LIST_DIR}/LICENSE
@@ -292,4 +311,5 @@ include(CPack)
 enable_testing()
 add_test(grab_help ${CMAKE_CURRENT_BINARY_DIR}/grab -h)
 add_test(listusb_help ${CMAKE_CURRENT_BINARY_DIR}/listusb -h)
+add_test(photo_help ${CMAKE_CURRENT_BINARY_DIR}/photo -h)
 
