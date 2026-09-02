@@ -153,6 +153,10 @@ else() #WIN32
   link_directories(${CMAKE_SOURCE_DIR}/win/lib)
   set(TARGET_PLATFORM "Windows")
   set(NATIVE TRUE)
+  # Without this, <Windows.h> (pulled in transitively by cxxopts.hpp, and
+  # directly by mightex1304.h) #defines min/max as macros, breaking every
+  # literal std::min(...)/std::max(...) call in any file that includes it.
+  add_compile_definitions(NOMINMAX)
 endif()
 include_directories("${CMAKE_SOURCE_DIR}/src")
 
