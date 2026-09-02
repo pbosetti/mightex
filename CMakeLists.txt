@@ -47,6 +47,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(LIBUSB_ENABLE_LOGGING OFF)
 endif()
 set(LIBUSB_INSTALL_TARGETS OFF)
+# This project only ever does polling-style device enumeration
+# (libusb_get_device_list) and never registers hotplug callbacks, so the
+# udev backend (which needs the libudev-dev system package, not present on
+# e.g. the ubuntu-latest CI image) buys nothing here.
+set(LIBUSB_ENABLE_UDEV OFF)
 FetchContent_Declare(libusb
   GIT_REPOSITORY https://github.com/libusb/libusb-cmake
   GIT_TAG HEAD
