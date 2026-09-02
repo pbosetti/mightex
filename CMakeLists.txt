@@ -246,9 +246,6 @@ install(FILES ${SOURCE_DIR}/main/grab.cpp ${SOURCE_DIR}/main/photo.cpp
         ${SOURCE_DIR}/main/cli_common.hpp
   DESTINATION examples
 )
-install(FILES ${CMAKE_CURRENT_LIST_DIR}/README_binary.md ${CMAKE_CURRENT_LIST_DIR}/LICENSE
-  DESTINATION .
-)
 if(BUILD_DOC)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/doc
     DESTINATION .
