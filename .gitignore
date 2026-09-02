@@ -7,6 +7,8 @@
 /tmp
 /.vscode
 /.vs
+*.dng
+*.png
 
 # out-of-source build and install
 /build*/*

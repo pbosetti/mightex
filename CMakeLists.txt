@@ -33,6 +33,11 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Must be set before any FetchContent_MakeAvailable() call below: it only
+# affects targets created after this point (including ones brought in via
+# add_subdirectory() inside FetchContent), so mightex_shared linking a
+# non-PIC libusb-1.0.a on Linux depends on this coming first.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Override build type (Debug or Release)
 # set(CMAKE_BUILD_TYPE Debug)

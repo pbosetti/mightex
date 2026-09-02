@@ -191,7 +191,13 @@ void save_dng(const std::string &path, const std::vector<uint16_t> &pixels,
 #else
   localtime_r(&t, &tmv);
 #endif
-  char datetime[20];
+  // The TIFF/DNG DateTime tag is always exactly 20 bytes: "YYYY:MM:DD
+  // HH:MM:SS\0". The scratch buffer is wider than that so the compiler's
+  // format-truncation check (which must account for %d's worst case, an
+  // 11-digit int, not the realistic range of tm_year/tm_mon/...) doesn't
+  // flag a truncation risk that can't actually happen here.
+  constexpr std::size_t DateTimeSize = 20;
+  char datetime[80];
   std::snprintf(datetime, sizeof(datetime), "%04d:%02d:%02d %02d:%02d:%02d",
                 tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday, tmv.tm_hour,
                 tmv.tm_min, tmv.tm_sec);
@@ -207,7 +213,7 @@ void save_dng(const std::string &path, const std::vector<uint16_t> &pixels,
   };
   uint32_t off_make = add_extra(make.c_str(), make.size() + 1);
   uint32_t off_model = add_extra(model.c_str(), model.size() + 1);
-  uint32_t off_datetime = add_extra(datetime, sizeof(datetime));
+  uint32_t off_datetime = add_extra(datetime, DateTimeSize);
   uint32_t off_unique = add_extra(unique.c_str(), unique.size() + 1);
 
   uint32_t strip_offset = ExtraOffset + static_cast<uint32_t>(extra.size());
@@ -248,7 +254,7 @@ void save_dng(const std::string &path, const std::vector<uint16_t> &pixels,
   make_entry(raw_ifd, 278, T_LONG, 1, height);             // RowsPerStrip
   make_entry(raw_ifd, 279, T_LONG, 1, strip_bytes);        // StripByteCounts
   make_entry(raw_ifd, 284, T_SHORT, 1, 1);                 // PlanarConfiguration
-  make_entry(raw_ifd, 306, T_ASCII, sizeof(datetime), off_datetime);
+  make_entry(raw_ifd, 306, T_ASCII, DateTimeSize, off_datetime);
   make_entry(raw_ifd, 50708, T_ASCII,
              static_cast<uint32_t>(unique.size() + 1),
              off_unique);                                  // UniqueCameraModel
