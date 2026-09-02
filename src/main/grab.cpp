@@ -172,6 +172,78 @@ void render_plot(std::span<const uint16_t> raw, uint16_t dark_mean, int lines,
   }
 }
 
+/// Renders a histogram of `raw`'s pixel VALUES (not positions): value bins
+/// from 0 to Mightex::MaxPixelValue on the x-axis (one bin per column),
+/// per-bin pixel count on the y-axis, using the same 2x3-dot braille
+/// rendering as render_plot(). Bins entirely below dark_mean print red,
+/// the rest print green. The y-axis auto-scales to the tallest bin unless
+/// `fullscale` is set, in which case it always spans 0..Mightex::Pixels
+/// (the theoretical max: every pixel landing in one bin).
+void render_histogram(std::span<const uint16_t> raw, uint16_t dark_mean,
+                       int lines, int cols, bool fullscale) {
+  const int total_rows = lines * 3;
+  const double bin_width = static_cast<double>(Mightex::MaxPixelValue) / cols;
+
+  std::vector<int> counts(cols, 0);
+  for (uint16_t v : raw) {
+    int bin = static_cast<int>(
+        std::min(v, Mightex::MaxPixelValue) / bin_width); // rounded down
+    counts[std::clamp(bin, 0, cols - 1)]++;
+  }
+
+  int y_max = fullscale ? static_cast<int>(Mightex::Pixels)
+                         : *std::max_element(counts.begin(), counts.end());
+  if (y_max <= 0)
+    y_max = 1;
+
+  std::vector<int> filled(cols);
+  for (int c = 0; c < cols; c++) {
+    int f = static_cast<int>(static_cast<double>(counts[c]) / y_max *
+                              total_rows);
+    filled[c] = std::clamp(f, 0, total_rows);
+  }
+
+  // Columns whose whole value range falls below dark_mean print red.
+  int dark_col = std::clamp(static_cast<int>(dark_mean / bin_width), 0, cols);
+
+  constexpr const char *Red = "\033[31m";
+  constexpr const char *Green = "\033[32m";
+  constexpr const char *Reset = "\033[0m";
+  constexpr unsigned SubRowBits[3] = {0x01u | 0x08u, 0x02u | 0x10u,
+                                       0x04u | 0x20u}; // top, mid, bottom
+
+  for (int r = 0; r < lines; r++) {
+    int g_bottom = (lines - 1 - r) * 3;
+
+    std::string line;
+    line.reserve(static_cast<std::size_t>(cols) * 8);
+    const char *cur_color = nullptr;
+    bool any_filled = false;
+    for (int c = 0; c < cols; c++) {
+      unsigned bits = 0;
+      for (int j = 0; j < 3; j++) {
+        int g = g_bottom + (2 - j);
+        if (g < filled[c])
+          bits |= SubRowBits[j];
+      }
+      if (bits == 0) {
+        line += ' ';
+        continue;
+      }
+      any_filled = true;
+      const char *color = (c < dark_col) ? Red : Green;
+      if (color != cur_color) {
+        line += color;
+        cur_color = color;
+      }
+      append_braille_utf8(line, bits);
+    }
+    if (any_filled)
+      line += Reset;
+    std::cout << line << "\n";
+  }
+}
+
 } // namespace
 
 int main(int argc, char *argv[]) {
@@ -192,11 +264,18 @@ int main(int argc, char *argv[]) {
        "characters, a la btop); optional LINESxCOLS size, default 4x75; "
        "implies -n",
        cxxopts::value<std::string>()->implicit_value("4x75"))
-      ("loop", "continuously re-grab and redraw the plot in place, at this "
-       "rate in fps (default 25); implies --plot; stop with Ctrl-C",
+      ("histogram", "plot a histogram of pixel values instead (0..max pixel "
+       "value on the x-axis, one bin per column, pixel count on the "
+       "y-axis); accepts the same LINESxCOLS size as --plot, and is "
+       "mutually exclusive with it; implies -n",
+       cxxopts::value<std::string>()->implicit_value("4x75"))
+      ("loop", "continuously re-grab and redraw the plot/histogram in "
+       "place, at this rate in fps (default 25); implies --plot unless "
+       "--histogram is given; stop with Ctrl-C",
        cxxopts::value<double>()->implicit_value("25"))
-      ("fullscale", "scale the plot's vertical axis to 0..max theoretical "
-       "pixel value, instead of auto-scaling to the frame's own max",
+      ("fullscale", "scale the chart's varying axis to its theoretical max "
+       "(max pixel value for --plot, total pixel count for --histogram), "
+       "instead of auto-scaling to the frame's own max",
        cxxopts::value<bool>()->default_value("false"))
       ("reset", "reset the device (software equivalent of unplug/replug) "
        "before use; can help if pixels get stuck at max value",
@@ -228,11 +307,18 @@ int main(int argc, char *argv[]) {
   bool nofilter = result["raw"].as<bool>();
   bool fullscale = result["fullscale"].as<bool>();
   bool do_plot = result.count("plot") > 0;
+  bool do_histogram = result.count("histogram") > 0;
+  if (do_plot && do_histogram) {
+    std::cerr << "Invalid arguments: --plot and --histogram are mutually "
+                 "exclusive\n";
+    return EXIT_FAILURE;
+  }
+  // Dimensions of whichever chart (--plot or --histogram) is active.
   int plot_lines = 4, plot_cols = 75;
-  if (do_plot) {
+  if (do_plot || do_histogram) {
     try {
-      std::tie(plot_lines, plot_cols) =
-          parse_plot_dims(result["plot"].as<std::string>());
+      std::tie(plot_lines, plot_cols) = parse_plot_dims(
+          result[do_plot ? "plot" : "histogram"].as<std::string>());
     } catch (const std::exception &e) {
       std::cerr << "Invalid arguments: " << e.what() << "\n";
       return EXIT_FAILURE;
@@ -245,9 +331,9 @@ int main(int argc, char *argv[]) {
     std::cerr << "Invalid arguments: --loop fps must be positive\n";
     return EXIT_FAILURE;
   }
-  if (do_loop)
+  if (do_loop && !do_plot && !do_histogram)
     do_plot = true;
-  if (do_plot)
+  if (do_plot || do_histogram)
     nodata = true;
 
   std::unique_ptr<Mightex::Camera> cam;
@@ -293,8 +379,8 @@ int main(int argc, char *argv[]) {
   if (do_loop)
     std::signal(SIGINT, handle_sigint);
 
-  // Lines occupied by the redrawable block (stats + plot), for --loop.
-  const int redraw_lines = 4 + (do_plot ? plot_lines : 0);
+  // Lines occupied by the redrawable block (stats + chart), for --loop.
+  const int redraw_lines = 4 + ((do_plot || do_histogram) ? plot_lines : 0);
   auto next_frame_at = std::chrono::steady_clock::now();
   bool first_frame = true;
 
@@ -334,10 +420,13 @@ int main(int argc, char *argv[]) {
     std::cerr << "Std.dev.: " << stats.std << "\n";
     std::cerr << "Range: " << stats.min << " - " << stats.max << "\n";
 
-    // plot or print frame data
+    // plot, histogram, or print frame data
     if (do_plot) {
       render_plot(cam->raw_frame(), cam->dark_mean(), plot_lines, plot_cols,
                   fullscale);
+    } else if (do_histogram) {
+      render_histogram(cam->raw_frame(), cam->dark_mean(), plot_lines,
+                        plot_cols, fullscale);
     } else if (!nodata) {
       auto raw_data = cam->raw_frame();
       auto data = cam->frame();
