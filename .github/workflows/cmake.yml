@@ -22,7 +22,7 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
       name: Checkout
       with:
         fetch-depth: 0
@@ -48,7 +48,7 @@ jobs:
     - name: Test
       run: ctest --test-dir build --rerun-failed --output-on-failure -R grab
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v6
       name: Upload Artifact
       # Create a single artifact (zip folder) with binaries for 3 OSs
       with:
