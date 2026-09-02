@@ -1,5 +1,5 @@
 # Mightex1304
-[![CMake](https://github.com/pbosetti/mightex/actions/workflows/cmake.yml/badge.svg)](https://github.com/pbosetti/mightex/actions/workflows/cmake.yml)[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/organization/repository)
+[![CMake](https://github.com/pbosetti/mightex/actions/workflows/cmake.yml/badge.svg)](https://github.com/pbosetti/mightex/actions/workflows/cmake.yml)[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/pbosetti/mightex)
 
 
 This is a userland driver for the [Mightex TCE-1304-u CCD line cameras](https://www.mightexsystems.com/product/usb2-0-3648-pixel-16-bit-ccd-line-camera-with-external-trigger/). It is based on [libusb](https://libusb.info).
